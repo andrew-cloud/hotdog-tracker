@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 
-// ── Supabase config ───────────────────────────────────────────────────────
 const SUPABASE_URL = "https://lrjydzmsqkfmenrtoklv.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxyanlkem1zcWtmbWVucnRva2x2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTE5NjcsImV4cCI6MjA5MDAyNzk2N30.CzW0n8xunV9gholcPDYq-V7yxdtH29ud9piUyhEwxoY";
+const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/trigger-gif`;
+const SESSION_KEY = "hd_session";
+const SESSION_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 const sb = {
   headers: {
@@ -10,15 +12,11 @@ const sb = {
     "apikey": SUPABASE_ANON_KEY,
     "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
   },
-
   async getEntries() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/entries?select=*&order=timestamp.desc`, {
-      headers: this.headers,
-    });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/entries?select=*&order=timestamp.desc`, { headers: this.headers });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
-
   async insertEntry(entry) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/entries`, {
       method: "POST",
@@ -28,84 +26,276 @@ const sb = {
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
-
-  async uploadGif(id, blob) {
-    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/gifs/${id}.gif`, {
+  async uploadVideo(id, file) {
+    const ext = file.name.split(".").pop() || "mp4";
+    const path = `${id}.${ext}`;
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/videos/${path}`, {
       method: "POST",
-      headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "image/gif",
-        "x-upsert": "true",
-      },
-      body: blob,
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": file.type || "video/mp4", "x-upsert": "true" },
+      body: file,
     });
     if (!res.ok) throw new Error(await res.text());
-    return `${SUPABASE_URL}/storage/v1/object/public/gifs/${id}.gif`;
+    return path;
+  },
+  async triggerGifConversion(entryId, videoPath) {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+      body: JSON.stringify({ entryId, videoPath }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+  async getEntry(id) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/entries?id=eq.${id}&select=*`, { headers: this.headers });
+    if (!res.ok) throw new Error(await res.text());
+    const rows = await res.json();
+    return rows[0] || null;
+  },
+  async getUser(name) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?name=eq.${encodeURIComponent(name)}&select=*`, { headers: this.headers });
+    if (!res.ok) throw new Error(await res.text());
+    const rows = await res.json();
+    return rows[0] || null;
+  },
+  async createUser(name, pin) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+      method: "POST",
+      headers: { ...this.headers, "Prefer": "return=representation" },
+      body: JSON.stringify({ name, pin }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   },
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+function getSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const session = JSON.parse(raw);
+    if (Date.now() - session.ts > SESSION_TTL) {
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return session;
+  } catch { return null; }
+}
+
+function saveSession(name) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ name, ts: Date.now() }));
+}
+
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
 const MEDALS = ["🥇", "🥈", "🥉"];
 
+// ── PIN Bottom Sheet ──────────────────────────────────────────────────────
+function PinSheet({ name, onSuccess, onCancel }) {
+  const [pin, setPin] = useState("");
+  const [isNew, setIsNew] = useState(null); // null=loading, true=new user, false=existing
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const user = await sb.getUser(name);
+      setIsNew(!user);
+    })();
+  }, [name]);
+
+  const handleDigit = (d) => {
+    if (pin.length < 4) {
+      const next = pin + d;
+      setPin(next);
+      setError("");
+      if (next.length === 4) handleSubmit(next);
+    }
+  };
+
+  const handleDelete = () => setPin(p => p.slice(0, -1));
+
+  const handleSubmit = async (finalPin) => {
+    setLoading(true);
+    setError("");
+    try {
+      if (isNew) {
+        await sb.createUser(name, finalPin);
+        saveSession(name);
+        onSuccess(name);
+      } else {
+        const user = await sb.getUser(name);
+        if (user.pin !== finalPin) {
+          setError("Wrong PIN — try again");
+          setPin("");
+          setLoading(false);
+          return;
+        }
+        saveSession(name);
+        onSuccess(name);
+      }
+    } catch (e) {
+      setError("Something went wrong");
+      setPin("");
+      setLoading(false);
+    }
+  };
+
+  const dots = [0, 1, 2, 3];
+  const digits = ["1","2","3","4","5","6","7","8","9","","0","⌫"];
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div onClick={onCancel} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000 }} />
+
+      {/* Sheet */}
+      <div style={{
+        position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
+        width: "100%", maxWidth: 520,
+        background: "#fff", borderRadius: "20px 20px 0 0",
+        padding: "24px 24px 40px",
+        zIndex: 1001,
+        boxShadow: "0 -4px 32px rgba(0,0,0,0.15)",
+        animation: "slideUp 0.25s ease",
+      }}>
+        <style>{`@keyframes slideUp { from { transform: translateX(-50%) translateY(100%); } to { transform: translateX(-50%) translateY(0); } }`}</style>
+
+        {/* Handle */}
+        <div style={{ width: 40, height: 4, background: "#ddd", borderRadius: 99, margin: "0 auto 20px" }} />
+
+        {/* Title */}
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{ fontFamily: "'Boogaloo', cursive", fontSize: 24, color: "#cc2200" }}>
+            {isNew === null ? "Checking..." : isNew ? "Create your PIN" : `Welcome back!`}
+          </div>
+          <div style={{ fontSize: 14, color: "#888", marginTop: 4 }}>
+            {isNew === null ? "" : isNew
+              ? `Set a 4-digit PIN for ${name}`
+              : `Enter your PIN for ${name}`}
+          </div>
+        </div>
+
+        {/* PIN dots */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 16, marginBottom: 8 }}>
+          {dots.map(i => (
+            <div key={i} style={{
+              width: 16, height: 16, borderRadius: "50%",
+              background: i < pin.length ? "#cc2200" : "#eee",
+              transition: "background 0.15s",
+            }} />
+          ))}
+        </div>
+
+        {/* Error */}
+        <div style={{ textAlign: "center", color: "#cc2200", fontSize: 13, fontWeight: 700, height: 20, marginBottom: 16 }}>
+          {error}
+        </div>
+
+        {/* Numpad */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, maxWidth: 280, margin: "0 auto" }}>
+          {digits.map((d, i) => (
+            <button
+              key={i}
+              onClick={() => d === "⌫" ? handleDelete() : d !== "" ? handleDigit(d) : null}
+              disabled={loading || isNew === null || d === ""}
+              style={{
+                height: 64, borderRadius: 14, border: "none",
+                background: d === "" ? "transparent" : d === "⌫" ? "#f5f5f5" : "#f9f9f9",
+                fontSize: d === "⌫" ? 20 : 26,
+                fontFamily: d === "⌫" ? "system-ui" : "'Boogaloo', cursive",
+                color: "#222",
+                cursor: d === "" ? "default" : "pointer",
+                opacity: loading || isNew === null ? 0.5 : 1,
+                transition: "background 0.1s",
+              }}
+            >
+              {d}
+            </button>
+          ))}
+        </div>
+
+        <button
+          className="ui fluid basic button"
+          style={{ marginTop: 20, color: "#aaa", fontSize: 13 }}
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ── Main App ──────────────────────────────────────────────────────────────
 export default function HotdogTracker() {
   const [tab, setTab] = useState("track");
   const [entries, setEntries] = useState([]);
   const [name, setName] = useState("");
   const [count, setCount] = useState(1);
+  const [videoFile, setVideoFile] = useState(null);
   const [videoSrc, setVideoSrc] = useState(null);
-  const [processing, setProcessing] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [progressLabel, setProgressLabel] = useState("");
-  const [gifBlob, setGifBlob] = useState(null);
-  const [gifPreview, setGifPreview] = useState(null);
-  const [gifLoaded, setGifLoaded] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [toast, setToast] = useState(null);
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
+  const [processingIds, setProcessingIds] = useState(new Set());
+  const [showPinSheet, setShowPinSheet] = useState(false);
+  const [session, setSession] = useState(getSession);
   const fileInputRef = useRef(null);
+  const pollRef = useRef(null);
 
-  // Load Semantic UI + fonts + gif.js
   useEffect(() => {
     if (!document.querySelector("#sui-css")) {
       const link = document.createElement("link");
-      link.id = "sui-css";
-      link.rel = "stylesheet";
+      link.id = "sui-css"; link.rel = "stylesheet";
       link.href = "https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.5.0/semantic.min.css";
       document.head.appendChild(link);
     }
     if (!document.querySelector("#hd-fonts")) {
       const link = document.createElement("link");
-      link.id = "hd-fonts";
-      link.rel = "stylesheet";
+      link.id = "hd-fonts"; link.rel = "stylesheet";
       link.href = "https://fonts.googleapis.com/css2?family=Boogaloo&display=swap";
       document.head.appendChild(link);
     }
-    if (window.GIF) { setGifLoaded(true); return; }
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js";
-    script.onload = () => setGifLoaded(true);
-    document.head.appendChild(script);
   }, []);
 
-  // Load entries from Supabase
   useEffect(() => {
     (async () => {
       try {
         const data = await sb.getEntries();
         setEntries(data);
+        const pending = new Set(data.filter(e => e.video_path && !e.gif_url).map(e => e.id));
+        setProcessingIds(pending);
       } catch (e) {
-        showToast("Could not load entries: " + e.message, "error");
+        showToast("Could not load entries", "error");
       }
       setLoadingData(false);
     })();
   }, []);
+
+  useEffect(() => {
+    if (processingIds.size === 0) return;
+    pollRef.current = setInterval(async () => {
+      for (const id of processingIds) {
+        try {
+          const entry = await sb.getEntry(id);
+          if (entry?.gif_url) {
+            setEntries(prev => prev.map(e => e.id === id ? { ...e, gif_url: entry.gif_url } : e));
+            setProcessingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+            showToast("🎉 GIF is ready in the gallery!");
+          }
+        } catch {}
+      }
+    }, 5000);
+    return () => clearInterval(pollRef.current);
+  }, [processingIds]);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -115,110 +305,62 @@ export default function HotdogTracker() {
   const handleVideoChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    setVideoFile(file);
     setVideoSrc(URL.createObjectURL(file));
-    setGifBlob(null);
-    setGifPreview(null);
-    setProgress(0);
   };
 
-  const seekVideo = (video, time) => new Promise((resolve) => {
-    const h = () => { video.removeEventListener("seeked", h); resolve(); };
-    video.addEventListener("seeked", h);
-    video.currentTime = time;
-  });
-
-  const convertToGif = async () => {
-    if (!videoRef.current || !gifLoaded) return;
-    setProcessing(true);
-    setProgress(2);
-    setProgressLabel("Loading video...");
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    try {
-      await new Promise((res, rej) => {
-        if (video.readyState >= 2) return res();
-        video.onloadeddata = res;
-        video.onerror = rej;
-        setTimeout(res, 6000);
-      });
-      const duration = Math.min(video.duration || 4, 5);
-      const frameCount = 12;
-      const delayMs = Math.max(Math.round((duration / frameCount) * 1000), 80);
-      const vw = video.videoWidth || 640;
-      const vh = video.videoHeight || 480;
-      const scale = Math.min(280 / vw, 210 / vh, 1);
-      canvas.width = Math.round(vw * scale);
-      canvas.height = Math.round(vh * scale);
-      setProgress(8); setProgressLabel("Fetching encoder...");
-      const resp = await fetch("https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js");
-      const workerBlob = await resp.blob();
-      const workerURL = URL.createObjectURL(workerBlob);
-      const gif = new window.GIF({ workers: 2, quality: 12, width: canvas.width, height: canvas.height, workerScript: workerURL });
-      for (let i = 0; i < frameCount; i++) {
-        const time = i === 0 ? 0 : (duration / (frameCount - 1)) * i;
-        await seekVideo(video, time);
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        gif.addFrame(canvas, { copy: true, delay: delayMs });
-        setProgress(10 + Math.round(((i + 1) / frameCount) * 65));
-        setProgressLabel(`Capturing frames (${i + 1}/${frameCount})...`);
-      }
-      gif.on("progress", p => {
-        setProgress(76 + Math.round(p * 20));
-        setProgressLabel("Encoding GIF...");
-      });
-      gif.on("finished", (blob) => {
-        setGifBlob(blob);
-        setGifPreview(URL.createObjectURL(blob));
-        setProcessing(false);
-        setProgress(100);
-        setProgressLabel("");
-        URL.revokeObjectURL(workerURL);
-        showToast("GIF ready! 🎉");
-      });
-      gif.render();
-      setProgress(76);
-    } catch {
-      setProcessing(false);
-      setProgress(0);
-      setProgressLabel("");
-      showToast("Conversion failed — try a shorter clip", "error");
-    }
-  };
-
-  const handleSubmit = async () => {
+  // Called when user taps "Log It!" — validate name then show PIN sheet
+  const handleLogIt = () => {
     if (!name.trim()) { showToast("Enter your name first! 👋", "error"); return; }
+    setShowPinSheet(true);
+  };
+
+  // Called after PIN is verified successfully
+  const handlePinSuccess = async (verifiedName) => {
+    setShowPinSheet(false);
+    setSession(getSession());
     setSubmitting(true);
+    setUploadProgress(0);
+
     try {
       const id = generateId();
-      let gif_url = null;
+      let video_path = null;
 
-      // Upload GIF to Supabase Storage if we have one
-      if (gifBlob) {
-        setProgressLabel("Uploading GIF...");
-        gif_url = await sb.uploadGif(id, gifBlob);
+      if (videoFile) {
+        showToast("Uploading video...", "success");
+        setUploadProgress(30);
+        video_path = await sb.uploadVideo(id, videoFile);
+        setUploadProgress(70);
       }
 
-      // Insert entry into Supabase DB
-      const entry = {
-        id,
-        name: name.trim(),
-        count: Number(count),
-        timestamp: Date.now(),
-        gif_url,
-      };
+      const entry = { id, name: verifiedName, count: Number(count), timestamp: Date.now(), gif_url: null, video_path };
       await sb.insertEntry(entry);
-      setEntries(prev => [entry, ...prev]);
+      setUploadProgress(90);
 
-      showToast(`+${count} hotdog${count !== 1 ? "s" : ""} logged for ${entry.name}! 🌭`);
-      setName(""); setCount(1); setVideoSrc(null);
-      setGifBlob(null); setGifPreview(null); setProgress(0);
+      if (video_path) {
+        await sb.triggerGifConversion(id, video_path);
+        setProcessingIds(prev => new Set([...prev, id]));
+        showToast("Logged! 🌭 GIF converting in the background...");
+      } else {
+        showToast(`+${count} hotdog${count !== 1 ? "s" : ""} logged for ${verifiedName}! 🌭`);
+      }
+
+      setEntries(prev => [entry, ...prev]);
+      setUploadProgress(100);
+      setName(""); setCount(1); setVideoFile(null); setVideoSrc(null);
       setTab("leaderboard");
     } catch (e) {
       showToast("Failed to save: " + e.message, "error");
     }
+
     setSubmitting(false);
-    setProgressLabel("");
+    setUploadProgress(0);
+  };
+
+  const handleLogout = () => {
+    clearSession();
+    setSession(null);
+    showToast("Logged out!");
   };
 
   const leaderboard = Object.values(
@@ -230,9 +372,8 @@ export default function HotdogTracker() {
     }, {})
   ).sort((a, b) => b.count - a.count);
 
-  const gallery = entries.filter(e => e.gif_url);
+  const gallery = entries.filter(e => e.video_path || e.gif_url);
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div style={{ background: "#f4f4f4", minHeight: "100vh", maxWidth: 520, margin: "0 auto" }}>
 
@@ -241,9 +382,22 @@ export default function HotdogTracker() {
         <h1 style={{ fontFamily: "'Boogaloo', cursive", fontSize: 40, color: "#f5b800", margin: 0, lineHeight: 1.1, textShadow: "3px 3px 0 rgba(0,0,0,0.2)" }}>
           🌭 Hotdog Tracker
         </h1>
-        <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 12, fontWeight: 700, letterSpacing: 1, margin: "5px 0 0", textTransform: "uppercase" }}>
-          Who reigns supreme?
-        </p>
+        {session ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, margin: "5px 0 0" }}>
+            <span style={{ color: "rgba(255,255,255,0.9)", fontSize: 12, fontWeight: 700 }}>
+              👋 {session.name}
+            </span>
+            <button onClick={handleLogout} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", fontSize: 11, fontWeight: 700, borderRadius: 99, padding: "2px 10px", cursor: "pointer" }}>
+              Log out
+            </button>
+          </div>
+        ) : (
+          <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: 700, letterSpacing: 1, margin: "5px 0 0", textTransform: "uppercase" }}>
+            Who reigns supreme?
+          </p>
+        )}
+
+        {/* Tabs */}
         <div style={{ display: "flex", marginTop: 14 }}>
           {[{ id: "track", label: "🌭 Track" }, { id: "leaderboard", label: "🏆 Leaderboard" }, { id: "gallery", label: "🎞 Gallery" }].map(t => (
             <div key={t.id} onClick={() => setTab(t.id)} style={{
@@ -255,6 +409,11 @@ export default function HotdogTracker() {
               userSelect: "none",
             }}>
               {t.label}
+              {t.id === "gallery" && processingIds.size > 0 && (
+                <span style={{ marginLeft: 4, background: "#f5b800", color: "#cc2200", borderRadius: 99, fontSize: 10, fontWeight: 900, padding: "1px 6px" }}>
+                  {processingIds.size}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -268,7 +427,19 @@ export default function HotdogTracker() {
             <div className="ui segment">
               <div className="field">
                 <label>Your Name</label>
-                <input type="text" placeholder="Who's eating? 🧑" value={name} onChange={e => setName(e.target.value)} />
+                <input
+                  type="text"
+                  placeholder="Who's eating? 🧑"
+                  value={session ? session.name : name}
+                  onChange={e => !session && setName(e.target.value)}
+                  readOnly={!!session}
+                  style={session ? { background: "#f9f9f9", color: "#aaa" } : {}}
+                />
+                {session && (
+                  <div style={{ fontSize: 11, color: "#aaa", marginTop: 4 }}>
+                    Logged in — PIN will be requested on submit
+                  </div>
+                )}
               </div>
             </div>
 
@@ -291,55 +462,43 @@ export default function HotdogTracker() {
 
             <div className="ui segment">
               <label style={{ fontSize: 13, fontWeight: 700, color: "rgba(0,0,0,0.6)", display: "block", marginBottom: 10 }}>
-                🎬 Eating Video → GIF
+                🎬 Eating Video
               </label>
               {!videoSrc ? (
                 <label style={{ display: "block", border: "2px dashed #ddd", borderRadius: 8, padding: "28px 20px", textAlign: "center", cursor: "pointer", background: "#fafafa" }}>
                   <input ref={fileInputRef} type="file" accept="video/*" style={{ display: "none" }} onChange={handleVideoChange} />
                   <i className="huge film icon" style={{ color: "#ccc", fontSize: 40 }} />
                   <div style={{ fontWeight: 700, marginTop: 10, fontSize: 15 }}>Tap to upload video</div>
-                  <div className="ui label" style={{ marginTop: 8, fontSize: 11, background: "#f0f0f0", color: "#999" }}>Auto-converted to GIF · max 5 sec</div>
+                  <div className="ui label" style={{ marginTop: 8, fontSize: 11, background: "#f0f0f0", color: "#999" }}>
+                    Converted to GIF automatically in the background
+                  </div>
                 </label>
               ) : (
                 <>
-                  <video ref={videoRef} src={videoSrc} style={{ width: "100%", maxHeight: 200, borderRadius: 6, background: "#111", display: "block" }} muted playsInline preload="auto" controls />
-
-                  {!gifPreview && !processing && (
-                    <button className="ui fluid yellow button" style={{ marginTop: 10, fontWeight: 700 }} onClick={convertToGif}>
-                      ✨ {gifLoaded ? "Convert to GIF" : "Loading encoder..."}
-                    </button>
-                  )}
-
-                  {(processing || (submitting && progressLabel === "Uploading GIF...")) && (
-                    <div style={{ marginTop: 12 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700, color: "#aaa", marginBottom: 5 }}>
-                        <span>{progressLabel}</span>
-                        <span>{progress}%</span>
-                      </div>
-                      <div style={{ height: 8, borderRadius: 99, background: "#eee", overflow: "hidden" }}>
-                        <div style={{ width: `${progress}%`, height: "100%", background: "#cc2200", transition: "width 0.25s", borderRadius: 99 }} />
-                      </div>
-                    </div>
-                  )}
-
-                  {gifPreview && (
-                    <div style={{ marginTop: 10 }}>
-                      <div className="ui green label" style={{ marginBottom: 8 }}>✅ GIF Ready!</div>
-                      <img src={gifPreview} style={{ width: "100%", borderRadius: 6, display: "block" }} alt="GIF preview" />
-                    </div>
-                  )}
-
-                  <button className="ui fluid basic button" style={{ marginTop: 8 }} onClick={() => { setVideoSrc(null); setGifBlob(null); setGifPreview(null); setProgress(0); }}>
+                  <video src={videoSrc} style={{ width: "100%", maxHeight: 200, borderRadius: 6, background: "#111", display: "block" }} muted playsInline controls />
+                  <div className="ui green label" style={{ marginTop: 10 }}>✅ Video ready to upload</div>
+                  <button className="ui fluid basic button" style={{ marginTop: 8 }} onClick={() => { setVideoFile(null); setVideoSrc(null); }}>
                     🗑 Remove video
                   </button>
                 </>
+              )}
+
+              {submitting && uploadProgress > 0 && uploadProgress < 100 && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700, color: "#aaa", marginBottom: 5 }}>
+                    <span>Uploading...</span><span>{uploadProgress}%</span>
+                  </div>
+                  <div style={{ height: 8, borderRadius: 99, background: "#eee", overflow: "hidden" }}>
+                    <div style={{ width: `${uploadProgress}%`, height: "100%", background: "#cc2200", transition: "width 0.3s", borderRadius: 99 }} />
+                  </div>
+                </div>
               )}
             </div>
 
             <button
               className={`ui fluid large red button${submitting ? " loading" : ""}`}
               style={{ fontFamily: "'Boogaloo', cursive", fontSize: 22, letterSpacing: 0.5, marginTop: 4 }}
-              onClick={handleSubmit}
+              onClick={handleLogIt}
               disabled={submitting}
             >
               🌭 Log It!
@@ -350,13 +509,9 @@ export default function HotdogTracker() {
         {/* ── LEADERBOARD ── */}
         {tab === "leaderboard" && (
           <>
-            <h3 className="ui header" style={{ fontFamily: "'Boogaloo', cursive", fontSize: 24, marginBottom: 16 }}>
-              🏆 All-Time Standings
-            </h3>
+            <h3 className="ui header" style={{ fontFamily: "'Boogaloo', cursive", fontSize: 24, marginBottom: 16 }}>🏆 All-Time Standings</h3>
             {loadingData ? (
-              <div style={{ textAlign: "center", padding: 40 }}>
-                <div className="ui active inline loader" />
-              </div>
+              <div style={{ textAlign: "center", padding: 40 }}><div className="ui active inline loader" /></div>
             ) : leaderboard.length === 0 ? (
               <div className="ui placeholder segment" style={{ textAlign: "center" }}>
                 <div className="ui icon header" style={{ color: "#aaa" }}>
@@ -365,39 +520,29 @@ export default function HotdogTracker() {
                   <div className="sub header">Head to Track and be the first</div>
                 </div>
               </div>
-            ) : (
-              leaderboard.map((p, i) => (
-                <div key={p.name} style={{
-                  display: "flex", alignItems: "center", gap: 14,
-                  padding: "13px 12px", borderRadius: 8, marginBottom: 8,
-                  background: i === 0 ? "#fffbef" : "#fafafa",
-                  border: i === 0 ? "1.5px solid #f5b800" : "1.5px solid #eee",
-                }}>
-                  <span style={{ fontFamily: "'Boogaloo', cursive", fontSize: i < 3 ? 28 : 14, width: 36, textAlign: "center", flexShrink: 0 }}>
-                    {i < 3 ? MEDALS[i] : `#${i + 1}`}
-                  </span>
-                  <div style={{ flex: 1, fontWeight: 900, fontSize: 15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {p.name}
-                  </div>
-                  <div className="ui red label" style={{ fontFamily: "'Boogaloo', cursive", fontSize: 15, flexShrink: 0 }}>
-                    {p.count} 🌭
-                  </div>
-                </div>
-              ))
-            )}
+            ) : leaderboard.map((p, i) => (
+              <div key={p.name} style={{
+                display: "flex", alignItems: "center", gap: 14,
+                padding: "13px 12px", borderRadius: 8, marginBottom: 8,
+                background: i === 0 ? "#fffbef" : "#fafafa",
+                border: i === 0 ? "1.5px solid #f5b800" : "1.5px solid #eee",
+              }}>
+                <span style={{ fontFamily: "'Boogaloo', cursive", fontSize: i < 3 ? 28 : 14, width: 36, textAlign: "center", flexShrink: 0 }}>
+                  {i < 3 ? MEDALS[i] : `#${i + 1}`}
+                </span>
+                <div style={{ flex: 1, fontWeight: 900, fontSize: 15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
+                <div className="ui red label" style={{ fontFamily: "'Boogaloo', cursive", fontSize: 15, flexShrink: 0 }}>{p.count} 🌭</div>
+              </div>
+            ))}
           </>
         )}
 
         {/* ── GALLERY ── */}
         {tab === "gallery" && (
           <>
-            <h3 className="ui header" style={{ fontFamily: "'Boogaloo', cursive", fontSize: 24, marginBottom: 16 }}>
-              🎞 GIF Gallery
-            </h3>
+            <h3 className="ui header" style={{ fontFamily: "'Boogaloo', cursive", fontSize: 24, marginBottom: 16 }}>🎞 GIF Gallery</h3>
             {loadingData ? (
-              <div style={{ textAlign: "center", padding: 40 }}>
-                <div className="ui active inline loader" />
-              </div>
+              <div style={{ textAlign: "center", padding: 40 }}><div className="ui active inline loader" /></div>
             ) : gallery.length === 0 ? (
               <div className="ui placeholder segment" style={{ textAlign: "center" }}>
                 <div className="ui icon header" style={{ color: "#aaa" }}>
@@ -408,31 +553,46 @@ export default function HotdogTracker() {
               </div>
             ) : (
               <div className="ui two column grid" style={{ margin: 0 }}>
-                {gallery.map(e => (
-                  <div key={e.id} className="column" style={{ padding: 5 }}>
-                    <div className="ui card" style={{ width: "100%", margin: 0, borderRadius: 10, overflow: "hidden" }}>
-                      <div className="image" style={{ background: "#111", aspectRatio: "4/3", overflow: "hidden" }}>
-                        <img src={e.gif_url} alt={e.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                      </div>
-                      <div className="content" style={{ padding: "8px 10px" }}>
-                        <div className="header" style={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {e.name}
+                {gallery.map(e => {
+                  const isProcessing = processingIds.has(e.id) || (!e.gif_url && e.video_path);
+                  return (
+                    <div key={e.id} className="column" style={{ padding: 5 }}>
+                      <div className="ui card" style={{ width: "100%", margin: 0, borderRadius: 10, overflow: "hidden" }}>
+                        <div className="image" style={{ background: "#111", aspectRatio: "4/3", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {e.gif_url
+                            ? <img src={e.gif_url} alt={e.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                            : <div style={{ textAlign: "center" }}>
+                                <div className="ui active inline inverted loader" style={{ marginBottom: 8 }} />
+                                <div style={{ fontSize: 11, fontWeight: 700, color: "#888" }}>Converting...</div>
+                              </div>}
                         </div>
-                        <div className="meta" style={{ marginTop: 4 }}>
-                          <span className="ui mini red label">{e.count} 🌭</span>
+                        <div className="content" style={{ padding: "8px 10px" }}>
+                          <div className="header" style={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.name}</div>
+                          <div className="meta" style={{ marginTop: 4, display: "flex", gap: 6, alignItems: "center" }}>
+                            <span className="ui mini red label">{e.count} 🌭</span>
+                            {isProcessing && <span className="ui mini yellow label">⏳ Processing</span>}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </>
         )}
       </div>
 
-      <canvas ref={canvasRef} style={{ display: "none" }} />
+      {/* PIN Sheet */}
+      {showPinSheet && (
+        <PinSheet
+          name={session ? session.name : name}
+          onSuccess={handlePinSuccess}
+          onCancel={() => setShowPinSheet(false)}
+        />
+      )}
 
+      {/* Toast */}
       {toast && (
         <div className={`ui ${toast.type === "error" ? "red" : "green"} message`} style={{
           position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
