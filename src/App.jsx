@@ -99,27 +99,26 @@ const MEDALS = ["🥇", "🥈", "🥉"];
 // ── PIN Bottom Sheet ──────────────────────────────────────────────────────
 function PinSheet({ name, onSuccess, onCancel }) {
   const [pin, setPin] = useState("");
-  const [isNew, setIsNew] = useState(null); // null=loading, true=new user, false=existing
+  const [isNew, setIsNew] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     (async () => {
       const user = await sb.getUser(name);
       setIsNew(!user);
+      // Auto-focus the hidden input to bring up native keyboard
+      setTimeout(() => inputRef.current?.focus(), 100);
     })();
   }, [name]);
 
-  const handleDigit = (d) => {
-    if (pin.length < 4) {
-      const next = pin + d;
-      setPin(next);
-      setError("");
-      if (next.length === 4) handleSubmit(next);
-    }
+  const handleChange = (e) => {
+    const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+    setPin(val);
+    setError("");
+    if (val.length === 4) handleSubmit(val);
   };
-
-  const handleDelete = () => setPin(p => p.slice(0, -1));
 
   const handleSubmit = async (finalPin) => {
     setLoading(true);
@@ -135,6 +134,7 @@ function PinSheet({ name, onSuccess, onCancel }) {
           setError("Wrong PIN — try again");
           setPin("");
           setLoading(false);
+          setTimeout(() => inputRef.current?.focus(), 50);
           return;
         }
         saveSession(name);
@@ -147,9 +147,6 @@ function PinSheet({ name, onSuccess, onCancel }) {
     }
   };
 
-  const dots = [0, 1, 2, 3];
-  const digits = ["1","2","3","4","5","6","7","8","9","","0","⌫"];
-
   return (
     <>
       {/* Backdrop */}
@@ -160,7 +157,7 @@ function PinSheet({ name, onSuccess, onCancel }) {
         position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
         width: "100%", maxWidth: 520,
         background: "#fff", borderRadius: "20px 20px 0 0",
-        padding: "24px 24px 40px",
+        padding: "24px 24px 48px",
         zIndex: 1001,
         boxShadow: "0 -4px 32px rgba(0,0,0,0.15)",
         animation: "slideUp 0.25s ease",
@@ -171,9 +168,9 @@ function PinSheet({ name, onSuccess, onCancel }) {
         <div style={{ width: 40, height: 4, background: "#ddd", borderRadius: 99, margin: "0 auto 20px" }} />
 
         {/* Title */}
-        <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <div style={{ fontFamily: "'Boogaloo', cursive", fontSize: 24, color: "#cc2200" }}>
-            {isNew === null ? "Checking..." : isNew ? "Create your PIN" : `Welcome back!`}
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{ fontFamily: "'Boogaloo', cursive", fontSize: 26, color: "#cc2200" }}>
+            {isNew === null ? "Checking..." : isNew ? "Create your PIN" : "Welcome back!"}
           </div>
           <div style={{ fontSize: 14, color: "#888", marginTop: 4 }}>
             {isNew === null ? "" : isNew
@@ -182,48 +179,60 @@ function PinSheet({ name, onSuccess, onCancel }) {
           </div>
         </div>
 
-        {/* PIN dots */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 16, marginBottom: 8 }}>
-          {dots.map(i => (
+        {/* Hidden native numeric input */}
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={pin}
+          onChange={handleChange}
+          maxLength={4}
+          autoComplete="one-time-code"
+          style={{
+            position: "absolute",
+            opacity: 0,
+            width: 1,
+            height: 1,
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* PIN dots — tap anywhere to refocus keyboard */}
+        <div
+          onClick={() => inputRef.current?.focus()}
+          style={{ display: "flex", justifyContent: "center", gap: 20, marginBottom: 8, cursor: "text", padding: "8px 0" }}
+        >
+          {[0, 1, 2, 3].map(i => (
             <div key={i} style={{
-              width: 16, height: 16, borderRadius: "50%",
+              width: 18, height: 18, borderRadius: "50%",
               background: i < pin.length ? "#cc2200" : "#eee",
-              transition: "background 0.15s",
+              transition: "background 0.15s, transform 0.1s",
+              transform: i < pin.length ? "scale(1.1)" : "scale(1)",
             }} />
           ))}
         </div>
 
+        {/* Hint */}
+        <div style={{ textAlign: "center", fontSize: 12, color: "#bbb", marginBottom: 4 }}>
+          {!error && !loading && isNew !== null && "Tap the dots to open keyboard"}
+        </div>
+
         {/* Error */}
-        <div style={{ textAlign: "center", color: "#cc2200", fontSize: 13, fontWeight: 700, height: 20, marginBottom: 16 }}>
+        <div style={{ textAlign: "center", color: "#cc2200", fontSize: 13, fontWeight: 700, height: 20, marginBottom: 20 }}>
           {error}
         </div>
 
-        {/* Numpad */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, maxWidth: 280, margin: "0 auto" }}>
-          {digits.map((d, i) => (
-            <button
-              key={i}
-              onClick={() => d === "⌫" ? handleDelete() : d !== "" ? handleDigit(d) : null}
-              disabled={loading || isNew === null || d === ""}
-              style={{
-                height: 64, borderRadius: 14, border: "none",
-                background: d === "" ? "transparent" : d === "⌫" ? "#f5f5f5" : "#f9f9f9",
-                fontSize: d === "⌫" ? 20 : 26,
-                fontFamily: d === "⌫" ? "system-ui" : "'Boogaloo', cursive",
-                color: "#222",
-                cursor: d === "" ? "default" : "pointer",
-                opacity: loading || isNew === null ? 0.5 : 1,
-                transition: "background 0.1s",
-              }}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
+        {/* Loading state */}
+        {loading && (
+          <div style={{ textAlign: "center", marginBottom: 16 }}>
+            <div className="ui active inline loader" />
+          </div>
+        )}
 
         <button
           className="ui fluid basic button"
-          style={{ marginTop: 20, color: "#aaa", fontSize: 13 }}
+          style={{ color: "#aaa", fontSize: 13 }}
           onClick={onCancel}
         >
           Cancel
