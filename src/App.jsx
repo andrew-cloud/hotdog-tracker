@@ -52,21 +52,22 @@ const sb = {
     return rows[0] || null;
   },
   async getUsers() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=name&order=name.asc`, { headers: this.headers });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=name_key,display_name&order=display_name.asc`, { headers: this.headers });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
-  async getUser(name) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?name=eq.${encodeURIComponent(name)}&select=*`, { headers: this.headers });
+  async getUser(displayName) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?display_name=eq.${encodeURIComponent(displayName)}&select=*`, { headers: this.headers });
     if (!res.ok) throw new Error(await res.text());
     const rows = await res.json();
     return rows[0] || null;
   },
-  async createUser(name, pin) {
+  async createUser(displayName, pin) {
+    const nameKey = displayName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
     const res = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
       method: "POST",
       headers: { ...this.headers, "Prefer": "return=representation" },
-      body: JSON.stringify({ name, pin }),
+      body: JSON.stringify({ name_key: nameKey, display_name: displayName, pin }),
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
@@ -106,7 +107,7 @@ export default function HotdogTracker() {
       try {
         const [entryData, userData] = await Promise.all([sb.getEntries(), sb.getUsers()]);
         setEntries(entryData);
-        setUsers(userData.map(u => u.name));
+        setUsers(userData.map(u => u.display_name));
         const pending = new Set(entryData.filter(e => e.video_path && !e.gif_url).map(e => e.id));
         setProcessingIds(pending);
       } catch {
