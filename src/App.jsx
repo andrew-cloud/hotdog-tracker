@@ -63,7 +63,7 @@ const sb = {
     return rows[0] || null;
   },
   async createUser(displayName, pin) {
-    const nameKey = displayName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const nameKey = displayName.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
     const res = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
       method: "POST",
       headers: { ...this.headers, "Prefer": "return=representation" },
@@ -81,26 +81,53 @@ function generateId() {
 const MEDALS = ["🥇", "🥈", "🥉"];
 const NEW_USER_SENTINEL = "__new__";
 
+// ── Stepper icons (inline SVG to avoid external asset dependency) ─────────
+function PlusIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <path d="M12 5v14M5 12h14" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+function MinusIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <path d="M5 12h14" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
 export default function HotdogTracker() {
   const [tab, setTab] = useState("track");
-  const [entries, setEntries] = useState([]);
-  const [users, setUsers] = useState([]);
+
+  // Auth state: null = not logged in, string = logged-in display name
+  const [authedName, setAuthedName] = useState(null);
+
+  // Login form state
   const [selectedName, setSelectedName] = useState("");
   const [customName, setCustomName] = useState("");
-  const [pin, setPin] = useState("");
-  const [pinError, setPinError] = useState("");
+  const [loginPin, setLoginPin] = useState("");
+  const [loginError, setLoginError] = useState("");
   const [isNewUser, setIsNewUser] = useState(null);
+  const [confirming, setConfirming] = useState(false);
+
+  // Log form state
   const [count, setCount] = useState(1);
   const [videoFile, setVideoFile] = useState(null);
   const [videoSrc, setVideoSrc] = useState(null);
-  const [loadingData, setLoadingData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [toast, setToast] = useState(null);
+
+  // Data
+  const [entries, setEntries] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
   const [processingIds, setProcessingIds] = useState(new Set());
+  const [toast, setToast] = useState(null);
+
   const pinInputRef = useRef(null);
-  const pollRef = useRef(null);
   const fileInputRef = useRef(null);
+  const pollRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -134,9 +161,15 @@ export default function HotdogTracker() {
     return () => clearInterval(pollRef.current);
   }, [processingIds]);
 
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  // ── Login flow ────────────────────────────────────────────────────────
   const handleNameSelect = async (value) => {
     setSelectedName(value);
-    setPin(""); setPinError(""); setIsNewUser(null); setCustomName("");
+    setLoginPin(""); setLoginError(""); setIsNewUser(null); setCustomName("");
     if (!value || value === NEW_USER_SENTINEL) {
       setIsNewUser(value === NEW_USER_SENTINEL ? true : null);
       return;
@@ -149,22 +182,44 @@ export default function HotdogTracker() {
   const handleCustomNameChange = (e) => {
     const val = e.target.value;
     setCustomName(val);
-    setPin(""); setPinError("");
+    setLoginPin(""); setLoginError("");
     setIsNewUser(val.trim().length > 0 ? true : null);
     if (val.trim().length > 0) setTimeout(() => pinInputRef.current?.focus(), 80);
   };
 
-  const handlePinChange = (e) => {
-    const val = e.target.value.replace(/\D/g, "").slice(0, 4);
-    setPin(val);
-    if (val.length > 0) setPinError("");
+  const activeName = selectedName === NEW_USER_SENTINEL
+    ? customName.trim()
+    : (selectedName || customName.trim());
+
+  const showPinField = activeName.length > 0 && isNewUser !== null;
+
+  const handleConfirm = async () => {
+    if (!activeName) { setLoginError("Select or enter your name first"); return; }
+    if (!loginPin || loginPin.length < 4) { setLoginError("Enter your 4-digit PIN"); pinInputRef.current?.focus(); return; }
+    setConfirming(true); setLoginError("");
+    try {
+      const existingUser = await sb.getUser(activeName);
+      if (existingUser) {
+        if (existingUser.pin !== loginPin) {
+          setLoginError("Wrong PIN — try again");
+          setLoginPin("");
+          setConfirming(false);
+          setTimeout(() => pinInputRef.current?.focus(), 50);
+          return;
+        }
+      } else {
+        await sb.createUser(activeName, loginPin);
+        setUsers(prev => [...prev, activeName].sort());
+      }
+      setAuthedName(activeName);
+      setSelectedName(""); setCustomName(""); setLoginPin(""); setIsNewUser(null);
+    } catch (e) {
+      setLoginError("Something went wrong");
+    }
+    setConfirming(false);
   };
 
-  const showToast = (msg, type = "success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 4000);
-  };
-
+  // ── Log it flow ───────────────────────────────────────────────────────
   const handleVideoChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -172,57 +227,29 @@ export default function HotdogTracker() {
     setVideoSrc(URL.createObjectURL(file));
   };
 
-  const activeName = selectedName === NEW_USER_SENTINEL
-    ? customName.trim()
-    : (selectedName || customName.trim());
-  const showPinField = activeName.length > 0 && isNewUser !== null;
-
   const handleSubmit = async () => {
-    if (!activeName) { showToast("Select or enter your name first!", "error"); return; }
-    if (!pin || pin.length < 4) { setPinError("Enter your 4-digit PIN"); pinInputRef.current?.focus(); return; }
-    setSubmitting(true); setPinError("");
+    if (!videoFile) { showToast("Video proof is required! 📹", "error"); return; }
+    setSubmitting(true); setUploadProgress(0);
     try {
-      const existingUser = await sb.getUser(activeName);
-      if (existingUser) {
-        if (existingUser.pin !== pin) {
-          setPinError("Wrong PIN — try again");
-          setPin("");
-          setSubmitting(false);
-          setTimeout(() => pinInputRef.current?.focus(), 50);
-          return;
-        }
-      } else {
-        await sb.createUser(activeName, pin);
-        setUsers(prev => [...prev, activeName].sort());
-      }
       const id = generateId();
-      let video_path = null;
-      if (videoFile) {
-        showToast("Uploading video...");
-        setUploadProgress(30);
-        video_path = await sb.uploadVideo(id, videoFile);
-        setUploadProgress(70);
-      }
-      const entry = { id, name: activeName, count: Number(count), timestamp: Date.now(), gif_url: null, video_path };
+      showToast("Uploading video...");
+      setUploadProgress(30);
+      const video_path = await sb.uploadVideo(id, videoFile);
+      setUploadProgress(70);
+      const entry = { id, name: authedName, count: Number(count), timestamp: Date.now(), gif_url: null, video_path };
       await sb.insertEntry(entry);
       setUploadProgress(90);
-      if (video_path) {
-        await sb.triggerGifConversion(id, video_path);
-        setProcessingIds(prev => new Set([...prev, id]));
-        showToast("Logged! 🌭 GIF converting in the background...");
-      } else {
-        showToast(`+${count} hotdog${count !== 1 ? "s" : ""} logged for ${activeName}! 🌭`);
-      }
+      await sb.triggerGifConversion(id, video_path);
+      setProcessingIds(prev => new Set([...prev, id]));
       setEntries(prev => [entry, ...prev]);
       setUploadProgress(100);
-      setSelectedName(""); setCustomName(""); setPin(""); setIsNewUser(null);
+      showToast("Logged! 🌭 GIF converting in the background...");
       setCount(1); setVideoFile(null); setVideoSrc(null);
       setTab("leaderboard");
     } catch (e) {
       showToast("Failed to save: " + e.message, "error");
     }
-    setSubmitting(false);
-    setUploadProgress(0);
+    setSubmitting(false); setUploadProgress(0);
   };
 
   const leaderboard = Object.values(
@@ -241,13 +268,12 @@ export default function HotdogTracker() {
 
       {/* ── Header ── */}
       <div className="app-header">
-        <h1 className="app-title">🌭 Hotdog Tracker</h1>
-        <p className="app-subtitle">Who reigns supreme?</p>
+        <h1 className="app-title">Hotdog Slam</h1>
         <div className="tab-bar">
           {[
-            { id: "track", label: "🌭 Track" },
-            { id: "leaderboard", label: "🏆 Leaderboard" },
-            { id: "gallery", label: "🎞 Gallery" },
+            { id: "track", label: "Log a dog" },
+            { id: "leaderboard", label: "Leaderboard" },
+            { id: "gallery", label: "Gallery" },
           ].map(t => (
             <div
               key={t.id}
@@ -267,130 +293,143 @@ export default function HotdogTracker() {
 
         {/* ══ TRACK ══ */}
         {tab === "track" && (
-          <div className="ui form">
+          <>
+            {/* Step 1: Not logged in → show login card */}
+            {!authedName && (
+              <div className="card">
+                {/* Name dropdown */}
+                <div className="field-group">
+                  <label className="label">Name</label>
+                  <select
+                    className="name-select"
+                    value={selectedName}
+                    onChange={e => handleNameSelect(e.target.value)}
+                  >
+                    <option value="" disabled>Select your name...</option>
+                    {users.map(u => <option key={u} value={u}>{u}</option>)}
+                    <option value={NEW_USER_SENTINEL}>➕ New player...</option>
+                  </select>
+                </div>
 
-            {/* Name + PIN */}
-            <div className="ui segment">
-              <div className="field">
-                <label>Your Name</label>
-                <select
-                  className={`name-select${!selectedName ? " placeholder" : ""}`}
-                  value={selectedName}
-                  onChange={e => handleNameSelect(e.target.value)}
+                {/* New player name input */}
+                {selectedName === NEW_USER_SENTINEL && (
+                  <div className="field-group">
+                    <input
+                      className="text-input"
+                      type="text"
+                      placeholder="Enter your name"
+                      value={customName}
+                      onChange={handleCustomNameChange}
+                      autoFocus
+                    />
+                  </div>
+                )}
+
+                {/* PIN input */}
+                {showPinField && (
+                  <div className="field-group">
+                    <label className="label">Enter PIN</label>
+                    <input
+                      ref={pinInputRef}
+                      className={`pin-input${loginError ? " has-error" : ""}`}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="one-time-code"
+                      value={loginPin}
+                      onChange={e => { setLoginPin(e.target.value.replace(/\D/g, "").slice(0, 4)); setLoginError(""); }}
+                      maxLength={4}
+                      placeholder="····"
+                    />
+                    {loginError && <div className="pin-error">{loginError}</div>}
+                  </div>
+                )}
+
+                <button
+                  className={`btn btn-outline${confirming ? " loading" : ""}`}
+                  onClick={handleConfirm}
+                  disabled={confirming}
                 >
-                  <option value="" disabled>Select your name...</option>
-                  {users.map(u => <option key={u} value={u}>{u}</option>)}
-                  <option value={NEW_USER_SENTINEL}>➕ New player...</option>
-                </select>
-              </div>
-
-              {selectedName === NEW_USER_SENTINEL && (
-                <div className="field">
-                  <input
-                    type="text"
-                    placeholder="Enter your name"
-                    value={customName}
-                    onChange={handleCustomNameChange}
-                    autoFocus
-                  />
-                </div>
-              )}
-
-              {showPinField && (
-                <div className="field pin-field">
-                  <label>
-                    {isNewUser ? "Create a 4-digit PIN" : "Enter your PIN"}
-                    {isNewUser && <span className="pin-label-hint">(first time? set your PIN here)</span>}
-                  </label>
-                  <div className="pin-dots">
-                    {[0, 1, 2, 3].map(i => (
-                      <div key={i} className={`pin-dot${i < pin.length ? " filled" : ""}`} />
-                    ))}
-                  </div>
-                  <input
-                    ref={pinInputRef}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    autoComplete="one-time-code"
-                    value={pin}
-                    onChange={handlePinChange}
-                    maxLength={4}
-                    placeholder="····"
-                    className={`pin-input${pinError ? " error" : ""}`}
-                  />
-                  {pinError && <div className="pin-error">{pinError}</div>}
-                </div>
-              )}
-            </div>
-
-            {/* Count */}
-            <div className="ui segment">
-              <span className="count-label">Hotdogs Consumed 🌭</span>
-              <div className="count-row">
-                <button className="ui circular red icon button" onClick={() => setCount(c => Math.max(1, c - 1))}>
-                  <i className="minus icon" />
-                </button>
-                <span className="count-number">{count}</span>
-                <button className="ui circular red icon button" onClick={() => setCount(c => c + 1)}>
-                  <i className="plus icon" />
+                  {confirming ? "Confirming..." : "Confirm"}
                 </button>
               </div>
-            </div>
+            )}
 
-            {/* Video */}
-            <div className="ui segment">
-              <span className="video-label">🎬 Eating Video</span>
-              {!videoSrc ? (
-                <label className="upload-zone">
-                  <input ref={fileInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoChange} />
-                  <i className="huge film icon upload-icon" />
-                  <div className="upload-hint">Tap to upload video</div>
-                  <div className="ui label upload-sub">Converted to GIF automatically in the background</div>
-                </label>
-              ) : (
-                <>
-                  <video src={videoSrc} className="video-preview" muted playsInline controls />
-                  <div className="ui green label video-ready-label">✅ Video ready to upload</div>
-                  <button className="ui fluid basic button remove-video-btn" onClick={() => { setVideoFile(null); setVideoSrc(null); }}>
-                    🗑 Remove video
-                  </button>
-                </>
-              )}
-              {submitting && uploadProgress > 0 && uploadProgress < 100 && (
-                <div className="upload-progress">
-                  <div className="upload-progress-meta">
-                    <span>Uploading...</span>
-                    <span>{uploadProgress}%</span>
-                  </div>
-                  <div className="progress-track">
-                    <div className="progress-fill" style={{ width: `${uploadProgress}%` }} />
+            {/* Step 2: Logged in → show full log form */}
+            {authedName && (
+              <>
+                <p className="welcome-heading">Welcome back, {authedName}!</p>
+
+                {/* Count stepper */}
+                <div className="card">
+                  <span className="label">Hot dogs consumed</span>
+                  <div className="stepper-row">
+                    <button className="stepper-btn" onClick={() => setCount(c => Math.max(1, c - 1))}>
+                      <MinusIcon />
+                    </button>
+                    <span className="stepper-count">{count}</span>
+                    <button className="stepper-btn" onClick={() => setCount(c => c + 1)}>
+                      <PlusIcon />
+                    </button>
                   </div>
                 </div>
-              )}
-            </div>
 
-            <button
-              className={`ui fluid large red button log-btn${submitting ? " loading" : ""}`}
-              onClick={handleSubmit}
-              disabled={submitting}
-            >
-              🌭 Log It!
-            </button>
-          </div>
+                {/* Video upload */}
+                <div className="card">
+                  <span className="label">Video proof (required)</span>
+                  <p className="video-description">
+                    Videos will be auto-converted to sped up gifs and added to the gallery wall.
+                  </p>
+                  {!videoSrc ? (
+                    <label className="upload-zone">
+                      <input ref={fileInputRef} type="file" accept="video/*" onChange={handleVideoChange} />
+                      <span className="upload-icon">📹</span>
+                      <span className="upload-hint">Tap to upload video</span>
+                    </label>
+                  ) : (
+                    <div className="video-actions">
+                      <video src={videoSrc} className="video-preview" muted playsInline controls />
+                      <button className="btn btn-ghost" onClick={() => { setVideoFile(null); setVideoSrc(null); }}>
+                        🗑 Remove video
+                      </button>
+                    </div>
+                  )}
+                  {submitting && uploadProgress > 0 && uploadProgress < 100 && (
+                    <div className="upload-progress">
+                      <div className="upload-progress-meta">
+                        <span>Uploading...</span>
+                        <span>{uploadProgress}%</span>
+                      </div>
+                      <div className="progress-track">
+                        <div className="progress-fill" style={{ width: `${uploadProgress}%` }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  className={`btn btn-primary btn-log${submitting ? " loading" : ""}`}
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                >
+                  {submitting ? "Logging..." : "Log it!"}
+                </button>
+              </>
+            )}
+          </>
         )}
 
         {/* ══ LEADERBOARD ══ */}
         {tab === "leaderboard" && (
           <>
-            <h3 className="ui header section-title">🏆 All-Time Standings</h3>
+            <h3 className="section-title">🏆 All-Time Standings</h3>
             {loadingData ? (
               <div className="loader-center"><div className="ui active inline loader" /></div>
             ) : leaderboard.length === 0 ? (
-              <div className="ui placeholder segment empty-state">
+              <div className="empty-state">
                 <div className="empty-icon">🌭</div>
                 <div className="empty-title">No hotdogs logged yet!</div>
-                <div className="empty-sub">Head to Track and be the first</div>
+                <div className="empty-sub">Head to Log a dog and be the first</div>
               </div>
             ) : leaderboard.map((p, i) => (
               <div key={p.name} className={`leaderboard-row${i === 0 ? " gold" : ""}`}>
@@ -398,7 +437,7 @@ export default function HotdogTracker() {
                   {i < 3 ? MEDALS[i] : `#${i + 1}`}
                 </span>
                 <div className="leaderboard-name">{p.name}</div>
-                <div className="ui red label leaderboard-count">{p.count} 🌭</div>
+                <div className="leaderboard-count-pill">{p.count} 🌭</div>
               </div>
             ))}
           </>
@@ -407,37 +446,32 @@ export default function HotdogTracker() {
         {/* ══ GALLERY ══ */}
         {tab === "gallery" && (
           <>
-            <h3 className="ui header section-title">🎞 GIF Gallery</h3>
+            <h3 className="section-title">🎞 GIF Gallery</h3>
             {loadingData ? (
               <div className="loader-center"><div className="ui active inline loader" /></div>
             ) : gallery.length === 0 ? (
-              <div className="ui placeholder segment empty-state">
+              <div className="empty-state">
                 <div className="empty-icon">🎬</div>
                 <div className="empty-title">No GIFs here yet!</div>
                 <div className="empty-sub">Upload a video when logging hotdogs</div>
               </div>
             ) : (
-              <div className="ui two column grid gallery-grid">
+              <div className="gallery-grid">
                 {gallery.map(e => {
                   const isProcessing = processingIds.has(e.id) || (!e.gif_url && e.video_path);
                   return (
-                    <div key={e.id} className="column gallery-col">
-                      <div className="ui card gallery-card">
-                        <div className="image gallery-image">
-                          {e.gif_url
-                            ? <img src={e.gif_url} alt={e.name} className="gallery-gif" />
-                            : <div className="gallery-processing">
-                                <div className="ui active inline inverted loader" />
-                                <div className="gallery-processing-label">Converting...</div>
-                              </div>}
+                    <div key={e.id} className="gallery-item">
+                      {e.gif_url ? (
+                        <img src={e.gif_url} alt={e.name} className="gallery-gif" />
+                      ) : (
+                        <div className="gallery-processing">
+                          <div className="ui active inline inverted loader" />
+                          <div className="gallery-processing-label">Converting...</div>
                         </div>
-                        <div className="content gallery-content">
-                          <div className="header gallery-name">{e.name}</div>
-                          <div className="meta gallery-meta">
-                            <span className="ui mini red label">{e.count} 🌭</span>
-                            {isProcessing && <span className="ui mini yellow label">⏳ Processing</span>}
-                          </div>
-                        </div>
+                      )}
+                      <div className="gallery-caption">
+                        {e.name} · {e.count} 🌭
+                        {isProcessing && !e.gif_url && " ⏳"}
                       </div>
                     </div>
                   );
