@@ -7,6 +7,7 @@ import { Button, Input, Stepper, UploadField, GifTile, Toast, Divider, TabBar, S
 const SUPABASE_URL = "https://lrjydzmsqkfmenrtoklv.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxyanlkem1zcWtmbWVucnRva2x2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTE5NjcsImV4cCI6MjA5MDAyNzk2N30.CzW0n8xunV9gholcPDYq-V7yxdtH29ud9piUyhEwxoY";
 const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/trigger-gif`;
+const UPLOAD_URL = `${SUPABASE_URL}/functions/v1/upload-video`;
 
 const sb = {
   headers: {
@@ -76,37 +77,28 @@ const sb = {
 // storage requires the Authorization header specifically, and the query
 // param ensures auth survives any CORS preflight header stripping.
 
-function uploadVideoXhr(id, file, onProgress) {
-  const ext = file.name.split(".").pop() || "mp4";
-  const path = `${id}.${ext}`;
-  const url = `${SUPABASE_URL}/storage/v1/object/videos/${path}`;
-
+function uploadVideoViaFunction(id, file, onProgress) {
   return new Promise((resolve, reject) => {
+    const form = new FormData();
+    form.append("file", file, file.name);
+    form.append("id", id);
     const xhr = new XMLHttpRequest();
-
     xhr.upload.addEventListener("progress", (e) => {
-      if (e.lengthComputable) {
-        onProgress(Math.round((e.loaded / e.total) * 100));
-      }
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
     });
-
     xhr.addEventListener("load", () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(path);
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch { resolve({ videoPath: `${id}.${file.name.split(".").pop() || "mp4"}` }); }
       } else {
         reject(new Error(`Upload failed: ${xhr.status} — ${xhr.responseText}`));
       }
     });
-
     xhr.addEventListener("error", () => reject(new Error("Network error during upload")));
     xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
-
-    xhr.open("POST", url);
+    xhr.open("POST", UPLOAD_URL);
     xhr.setRequestHeader("apikey", SUPABASE_ANON_KEY);
-    xhr.setRequestHeader("Authorization", `Bearer ${SUPABASE_ANON_KEY}`);
-    xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
-    xhr.setRequestHeader("x-upsert", "true");
-    xhr.send(file);
+    xhr.send(form);
   });
 }
 
@@ -278,7 +270,7 @@ export default function HotdogTracker() {
       showToast("Uploading video...");
 
       // Chunked TUS upload — real byte-level progress 0→100
-      const video_path = await uploadVideoXhr(id, videoFile, (pct) => {
+      const result = await uploadVideoViaFunction(id, videoFile, (pct) => {
         setUploadProgress(pct);
         setVideoState("uploading");
       });
@@ -292,9 +284,11 @@ export default function HotdogTracker() {
         count: Number(count),
         timestamp: Date.now(),
         gif_url: null,
-        video_path,
+        video_path: result.videoPath,
       };
       await sb.insertEntry(entry);
+
+      // GIF conversion already triggered by the upload edge function
 
       // Kick off background GIF conversion via edge function
       await sb.triggerGifConversion(id, video_path);
