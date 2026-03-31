@@ -81,26 +81,27 @@ function uploadVideoTus(id, file, onProgress) {
 
   return new Promise((resolve, reject) => {
     const upload = new tus.Upload(file, {
-      // Supabase TUS endpoint
       endpoint: `${SUPABASE_URL}/storage/v1/upload/resumable`,
       retryDelays: [0, 3000, 5000, 10000, 20000],
       headers: {
         authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         apikey: SUPABASE_ANON_KEY,
       },
-      // Send data alongside the creation request (fewer round-trips)
-      uploadDataDuringCreation: true,
-      // Clean up fingerprint after success so re-uploads start fresh
+      // Supabase does NOT support the creation-with-upload TUS extension
+      // so this must be false or the server rejects with 400 immediately
+      uploadDataDuringCreation: false,
       removeFingerprintOnSuccess: true,
       metadata: {
         bucketName: "videos",
         objectName: path,
         contentType: file.type || "video/mp4",
         cacheControl: "3600",
+        // x-upsert must be in metadata for Supabase TUS, not in headers
+        "x-upsert": "true",
       },
       // 6 MB chunks — Supabase minimum is 5 MB for multipart
       chunkSize: 6 * 1024 * 1024,
-      onError: reject,
+      onError: (err) => reject(new Error(`Upload failed: ${err.message || err}`)),
       onProgress: (bytesUploaded, bytesTotal) => {
         const pct = Math.round((bytesUploaded / bytesTotal) * 100);
         onProgress?.(pct);
@@ -108,7 +109,6 @@ function uploadVideoTus(id, file, onProgress) {
       onSuccess: () => resolve(path),
     });
 
-    // Resume a previous interrupted upload if one exists
     upload.findPreviousUploads().then((prev) => {
       if (prev.length) upload.resumeFromPreviousUpload(prev[0]);
       upload.start();
@@ -308,7 +308,8 @@ export default function HotdogTracker() {
       setUploadProgress(0);
       setTab("standings");
     } catch (e) {
-      showToast("Failed to save: " + e.message, "error");
+      console.error("Submit error:", e);
+      showToast(e.message || "Something went wrong — please try again.", "error");
       setVideoState("error");
     }
     setSubmitting(false);
