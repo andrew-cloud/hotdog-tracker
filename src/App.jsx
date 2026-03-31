@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import * as tus from "tus-js-client";
 import "./App.css";
 import { Button, Input, Stepper, UploadField, GifTile, Toast, Divider, TabBar, Select } from "./design-system";
 
@@ -71,48 +70,41 @@ const sb = {
   },
 };
 
-// ── TUS chunked upload ────────────────────────────────────────────────────────
-// Splits large video files into 6 MB chunks, uploads resumably, and reports
-// real byte-level progress. Works with Supabase Storage's TUS endpoint.
+// ── XHR upload with real progress ────────────────────────────────────────────
+// Uses XMLHttpRequest so we get upload progress events on all browsers
+// including iOS Safari. Sends directly to the standard Supabase storage
+// endpoint — no TUS complexity needed for files under ~500MB.
 
-function uploadVideoTus(id, file, onProgress) {
+function uploadVideoXhr(id, file, onProgress) {
   const ext = file.name.split(".").pop() || "mp4";
   const path = `${id}.${ext}`;
 
   return new Promise((resolve, reject) => {
-    const upload = new tus.Upload(file, {
-      endpoint: `${SUPABASE_URL}/storage/v1/upload/resumable`,
-      retryDelays: [0, 3000, 5000, 10000, 20000],
-      headers: {
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        apikey: SUPABASE_ANON_KEY,
-      },
-      // Supabase does NOT support the creation-with-upload TUS extension
-      // so this must be false or the server rejects with 400 immediately
-      uploadDataDuringCreation: false,
-      removeFingerprintOnSuccess: true,
-      metadata: {
-        bucketName: "videos",
-        objectName: path,
-        contentType: file.type || "video/mp4",
-        cacheControl: "3600",
-        // x-upsert must be in metadata for Supabase TUS, not in headers
-        "x-upsert": "true",
-      },
-      // 6 MB chunks — Supabase minimum is 5 MB for multipart
-      chunkSize: 6 * 1024 * 1024,
-      onError: (err) => reject(new Error(`Upload failed: ${err.message || err}`)),
-      onProgress: (bytesUploaded, bytesTotal) => {
-        const pct = Math.round((bytesUploaded / bytesTotal) * 100);
-        onProgress?.(pct);
-      },
-      onSuccess: () => resolve(path),
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
     });
 
-    upload.findPreviousUploads().then((prev) => {
-      if (prev.length) upload.resumeFromPreviousUpload(prev[0]);
-      upload.start();
+    xhr.addEventListener("load", () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(path);
+      } else {
+        reject(new Error(`Upload failed: ${xhr.status} — ${xhr.responseText}`));
+      }
     });
+
+    xhr.addEventListener("error", () => reject(new Error("Network error during upload")));
+    xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
+
+    xhr.open("POST", `${SUPABASE_URL}/storage/v1/object/videos/${path}`);
+    xhr.setRequestHeader("apikey", SUPABASE_ANON_KEY);
+    xhr.setRequestHeader("Authorization", `Bearer ${SUPABASE_ANON_KEY}`);
+    xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
+    xhr.setRequestHeader("x-upsert", "true");
+    xhr.send(file);
   });
 }
 
@@ -284,7 +276,7 @@ export default function HotdogTracker() {
       showToast("Uploading video...");
 
       // Chunked TUS upload — real byte-level progress 0→100
-      const video_path = await uploadVideoTus(id, videoFile, (pct) => {
+      const video_path = await uploadVideoXhr(id, videoFile, (pct) => {
         setUploadProgress(pct);
         setVideoState("uploading");
       });
