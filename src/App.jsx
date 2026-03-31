@@ -71,13 +71,17 @@ const sb = {
 };
 
 // ── XHR upload with real progress ────────────────────────────────────────────
-// Uses XMLHttpRequest so we get upload progress events on all browsers
-// including iOS Safari. Sends directly to the standard Supabase storage
-// endpoint — no TUS complexity needed for files under ~500MB.
+// Uses XMLHttpRequest for upload progress events on all browsers.
+// Auth token is passed as a query param rather than a header — iOS Safari
+// strips the Authorization header from cross-origin XHR requests.
 
 function uploadVideoXhr(id, file, onProgress) {
   const ext = file.name.split(".").pop() || "mp4";
   const path = `${id}.${ext}`;
+
+  // Pass apikey as query param — Supabase accepts this as an alternative
+  // to the Authorization header, and it survives iOS Safari's CORS restrictions
+  const url = `${SUPABASE_URL}/storage/v1/object/videos/${path}?apikey=${SUPABASE_ANON_KEY}`;
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -99,9 +103,7 @@ function uploadVideoXhr(id, file, onProgress) {
     xhr.addEventListener("error", () => reject(new Error("Network error during upload")));
     xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
 
-    xhr.open("POST", `${SUPABASE_URL}/storage/v1/object/videos/${path}`);
-    xhr.setRequestHeader("apikey", SUPABASE_ANON_KEY);
-    xhr.setRequestHeader("Authorization", `Bearer ${SUPABASE_ANON_KEY}`);
+    xhr.open("POST", url);
     xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
     xhr.setRequestHeader("x-upsert", "true");
     xhr.send(file);
