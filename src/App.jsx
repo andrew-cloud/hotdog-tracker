@@ -71,17 +71,15 @@ const sb = {
 };
 
 // ── XHR upload with real progress ────────────────────────────────────────────
-// Uses XMLHttpRequest for upload progress events on all browsers.
-// Auth token is passed as a query param rather than a header — iOS Safari
-// strips the Authorization header from cross-origin XHR requests.
+// Uses XMLHttpRequest for real upload progress events on all browsers.
+// Sends apikey as both a query param and Authorization header — Supabase
+// storage requires the Authorization header specifically, and the query
+// param ensures auth survives any CORS preflight header stripping.
 
 function uploadVideoXhr(id, file, onProgress) {
   const ext = file.name.split(".").pop() || "mp4";
   const path = `${id}.${ext}`;
-
-  // Pass apikey as query param — Supabase accepts this as an alternative
-  // to the Authorization header, and it survives iOS Safari's CORS restrictions
-  const url = `${SUPABASE_URL}/storage/v1/object/videos/${path}?apikey=${SUPABASE_ANON_KEY}`;
+  const url = `${SUPABASE_URL}/storage/v1/object/videos/${path}`;
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -104,6 +102,8 @@ function uploadVideoXhr(id, file, onProgress) {
     xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
 
     xhr.open("POST", url);
+    xhr.setRequestHeader("apikey", SUPABASE_ANON_KEY);
+    xhr.setRequestHeader("Authorization", `Bearer ${SUPABASE_ANON_KEY}`);
     xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
     xhr.setRequestHeader("x-upsert", "true");
     xhr.send(file);
