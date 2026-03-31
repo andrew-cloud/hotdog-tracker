@@ -69,7 +69,7 @@ function getLabelColor(variant: TabVariant, state: TabState): string {
       ? "var(--component\\/tab-indicator, #e8a44a)"
       : "var(--component\\/tab-text-active, #f0ede6)";
   }
-  return "var(--component\\/tab-text-default, #9e9bb4)";
+  return "var(--component\\/tab-text-default, #6b6882)";
 }
 
 // ── TabRail ───────────────────────────────────────────

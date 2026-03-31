@@ -189,7 +189,7 @@ export default function UploadField({
         width:          "280px",
         height:         "160px",
         borderRadius:   "8px",
-        border:         `1.5px ${isDashed ? "dashed" : "solid"} ${BORDER_COLOR[state]}`,
+        border:         `2px ${isDashed ? "dashed" : "solid"} ${BORDER_COLOR[state]}`,
         background:     ZONE_BG[state],
         cursor:         state === "uploading" || state === "filled" ? "default" : "pointer",
         transition:     "background 0.15s ease, border-color 0.15s ease",

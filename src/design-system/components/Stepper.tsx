@@ -79,19 +79,6 @@ function StepperButton({ char, disabled = false, onClick, ariaLabel }: StepperBu
   );
 }
 
-// ── Divider (internal) ────────────────────────────────
-
-function Divider() {
-  return (
-    <div style={{
-      width:      "1px",
-      alignSelf:  "stretch",
-      background: "var(--component\\/input-border, #3a3a52)",
-      flexShrink: 0,
-    }} />
-  );
-}
-
 // ── Stepper ───────────────────────────────────────────
 
 export default function Stepper({
@@ -137,6 +124,7 @@ export default function Stepper({
         gap:           "8px",
         alignItems:    "flex-start",
         position:      "relative",
+        width:         "100%",
         opacity:       disabled ? 0.45 : 1,
         ...style,
       }}
@@ -156,18 +144,18 @@ export default function Stepper({
         </span>
       )}
 
-      {/* Control row */}
+      {/* Control row — matches Figma: three free-standing elements, space-between */}
       <div
         role="group"
         aria-label={label ?? "Stepper"}
         style={{
-          display:      "flex",
-          alignItems:   "center",
-          overflow:     "hidden",
-          borderRadius: "8px",
-          border:       "1px solid var(--component\\/input-border, #3a3a52)",
-          flexShrink:   0,
-          boxSizing:    "border-box",
+          display:        "flex",
+          alignItems:     "center",
+          justifyContent: "space-between",
+          width:          "100%",
+          flexShrink:     0,
+          overflow:       "hidden",
+          borderRadius:   "var(--radius\\/base, 8px)",
         }}
       >
         <StepperButton
@@ -177,9 +165,7 @@ export default function Stepper({
           ariaLabel="Decrease value"
         />
 
-        <Divider />
-
-        {/* Value display */}
+        {/* Value display — transparent background, no border */}
         <div
           aria-live="polite"
           aria-atomic="true"
@@ -189,7 +175,6 @@ export default function Stepper({
             justifyContent: "center",
             width:          "72px",
             height:         "40px",
-            background:     "var(--component\\/input-bg, #1e1e28)",
             flexShrink:     0,
           }}
         >
@@ -205,8 +190,6 @@ export default function Stepper({
             {value}
           </span>
         </div>
-
-        <Divider />
 
         <StepperButton
           char="+"

@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import ReactDOM from "react-dom";
 
 // ── Types ─────────────────────────────────────────────
 
@@ -129,33 +130,36 @@ function OptionItem({ option, active = false, onSelect }: OptionItemProps) {
 }
 
 // ── SelectDropdownPanel sub-component ────────────────
+// Rendered via portal into document.body so it escapes
+// any parent overflow:hidden (e.g. card containers).
 
 interface DropdownPanelProps {
-  options:       SelectOption[];
+  options:        SelectOption[];
   selectedValue?: string;
-  onSelect:      (value: string) => void;
-  width:         number;
+  onSelect:       (value: string) => void;
+  anchorRect:     DOMRect | null;
 }
 
-function DropdownPanel({ options, selectedValue, onSelect, width }: DropdownPanelProps) {
+function DropdownPanel({ options, selectedValue, onSelect, anchorRect }: DropdownPanelProps) {
+  if (!anchorRect) return null;
+
   const style: React.CSSProperties = {
-    position:     "absolute",
-    top:          "100%",
-    left:         0,
-    marginTop:    "4px",
-    width:        `${width}px`,
+    position:     "fixed",
+    top:          anchorRect.bottom + 4,
+    left:         anchorRect.left,
+    width:        anchorRect.width,
     background:   "var(--surface\\/bg-tertiary, #1e1e28)",
     border:       "1px solid var(--component\\/input-border, #3a3a52)",
     borderRadius: "var(--radius\\/md, 6px)",
     overflow:     "hidden",
     paddingTop:   "4px",
     paddingBottom:"4px",
-    zIndex:       50,
+    zIndex:       9999,
     boxSizing:    "border-box",
   };
 
-  return (
-    <div style={style} role="listbox">
+  return ReactDOM.createPortal(
+    <div style={style} role="listbox" data-select-portal="true">
       {options.map(opt => (
         <OptionItem
           key={opt.value}
@@ -164,7 +168,8 @@ function DropdownPanel({ options, selectedValue, onSelect, width }: DropdownPane
           onSelect={onSelect}
         />
       ))}
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -183,8 +188,9 @@ export default function Select({
 }: SelectProps) {
   const [isOpen, setIsOpen]         = useState(false);
   const [selected, setSelected]     = useState<string | undefined>(value);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const wrapperRef                  = useRef<HTMLDivElement>(null);
-  const [fieldWidth, setFieldWidth] = useState(220);
+  const fieldRef                    = useRef<HTMLDivElement>(null);
 
   const isDisabled     = state === "disabled";
   const isError        = state === "error";
@@ -198,21 +204,45 @@ export default function Select({
     : currentValue   ? "selected"
     : "default";
 
-  // Measure field width for dropdown
-  useEffect(() => {
-    if (wrapperRef.current) setFieldWidth(wrapperRef.current.offsetWidth);
+  // Measure field for portal positioning
+  const updateAnchorRect = useCallback(() => {
+    if (fieldRef.current) {
+      setAnchorRect(fieldRef.current.getBoundingClientRect());
+    }
   }, []);
 
   // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
+        // Also check if the click was inside the portal dropdown
+        const target = e.target as Element;
+        if (!target.closest('[data-select-portal]')) {
+          setIsOpen(false);
+        }
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  // Reposition on scroll/resize
+  useEffect(() => {
+    if (!isOpen) return;
+    const update = () => updateAnchorRect();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [isOpen, updateAnchorRect]);
+
+  const handleToggle = () => {
+    if (isDisabled) return;
+    updateAnchorRect();
+    setIsOpen(prev => !prev);
+  };
 
   const handleSelect = (val: string) => {
     setSelected(val);
@@ -295,12 +325,13 @@ export default function Select({
       <p style={labelStyle}>{label}</p>
 
       <div
+        ref={fieldRef}
         style={fieldStyle}
         role="combobox"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-disabled={isDisabled}
-        onClick={() => !isDisabled && setIsOpen(prev => !prev)}
+        onClick={handleToggle}
       >
         <span style={valueStyle}>
           {selectedOption?.label ?? placeholder}
@@ -315,7 +346,7 @@ export default function Select({
           options={options}
           selectedValue={currentValue}
           onSelect={handleSelect}
-          width={fieldWidth}
+          anchorRect={anchorRect}
         />
       )}
     </div>

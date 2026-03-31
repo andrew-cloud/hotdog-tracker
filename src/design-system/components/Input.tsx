@@ -5,16 +5,26 @@ import React from "react";
 export type InputState = "default" | "focus" | "filled" | "error" | "success" | "disabled";
 
 export interface InputProps {
-  state?:       InputState;
-  label?:       string;
-  hint?:        string;
-  placeholder?: string;
-  value?:       string;
-  showLabel?:   boolean;
-  showHint?:    boolean;
-  onChange?:    (e: React.ChangeEvent<HTMLInputElement>) => void;
-  className?:   string;
-  style?:       React.CSSProperties;
+  state?:        InputState;
+  label?:        string;
+  hint?:         string;
+  placeholder?:  string;
+  value?:        string;
+  showLabel?:    boolean;
+  showHint?:     boolean;
+  onChange?:     (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onFocus?:      (e: React.FocusEvent<HTMLInputElement>) => void;
+  onBlur?:       (e: React.FocusEvent<HTMLInputElement>) => void;
+  onKeyDown?:    (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  /** Forwarded to native <input> */
+  type?:         string;
+  inputMode?:    React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  maxLength?:    number;
+  autoFocus?:    boolean;
+  autoComplete?: string;
+  pattern?:      string;
+  className?:    string;
+  style?:        React.CSSProperties;
 }
 
 // ── Token maps ────────────────────────────────────────
@@ -67,14 +77,23 @@ const DEFAULT_HINTS: Record<InputState, string> = {
 // ── Component ─────────────────────────────────────────
 
 export default function Input({
-  state       = "default",
-  label       = "Email Address",
+  state        = "default",
+  label        = "Email Address",
   hint,
-  placeholder = "Enter value…",
+  placeholder  = "Enter value…",
   value,
-  showLabel   = true,
-  showHint    = true,
+  showLabel    = true,
+  showHint     = true,
   onChange,
+  onFocus,
+  onBlur,
+  onKeyDown,
+  type,
+  inputMode,
+  maxLength,
+  autoFocus,
+  autoComplete,
+  pattern,
   className,
   style,
 }: InputProps) {
@@ -157,7 +176,16 @@ export default function Input({
           placeholder={placeholder}
           value={value}
           disabled={isDisabled}
+          type={type}
+          inputMode={inputMode}
+          maxLength={maxLength}
+          autoFocus={autoFocus}
+          autoComplete={autoComplete}
+          pattern={pattern}
           onChange={onChange}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          onKeyDown={onKeyDown}
         />
       </div>
 
