@@ -6,13 +6,13 @@
 // from cross-origin XHR requests.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_KEY")!;
+const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const TRIGGER_SECRET_KEY = Deno.env.get("TRIGGER_SECRET_KEY")!;
 const TRIGGER_PROJECT_REF = Deno.env.get("TRIGGER_PROJECT_REF")!;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://andrew-cloud.github.io",
-  "Access-Control-Allow-Headers": "content-type, apikey",
+  "Access-Control-Allow-Headers": "content-type, apikey, authorization",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Content-Type": "application/json",
 };
