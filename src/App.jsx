@@ -214,6 +214,14 @@ export default function HotdogTracker() {
     setConfirming(true);
     try {
       const existingUser = await sb.getUser(activeName);
+
+      // If they picked "New contestant" but the name is already taken, block it
+      if (selectedName === NEW_USER_SENTINEL && existingUser) {
+        setLoginError(`"${activeName}" is already taken — select them from the list instead.`);
+        setConfirming(false);
+        return;
+      }
+
       setIsNewUser(!existingUser);
     } catch {
       setIsNewUser(selectedName === NEW_USER_SENTINEL);
@@ -383,7 +391,10 @@ export default function HotdogTracker() {
                           label="Your name"
                           placeholder="Enter your name"
                           value={customName}
-                          onChange={e => setCustomName(e.target.value)}
+                          onChange={e => { setCustomName(e.target.value); setLoginError(""); }}
+                          state={loginError ? "error" : "default"}
+                          hint={loginError}
+                          showHint={!!loginError}
                           autoFocus
                         />
                       </div>
