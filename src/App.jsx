@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import "./App.css";
+import { Button, Input, Stepper, UploadField, GifTile, Toast, Divider, TabBar, Select } from "./design-system";
+
+// ── Supabase client (unchanged) ───────────────────────────────────────────────
 
 const SUPABASE_URL = "https://lrjydzmsqkfmenrtoklv.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxyanlkem1zcWtmbWVucnRva2x2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTE5NjcsImV4cCI6MjA5MDAyNzk2N30.CzW0n8xunV9gholcPDYq-V7yxdtH29ud9piUyhEwxoY";
@@ -30,7 +33,12 @@ const sb = {
     const path = `${id}.${ext}`;
     const res = await fetch(`${SUPABASE_URL}/storage/v1/object/videos/${path}`, {
       method: "POST",
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": file.type || "video/mp4", "x-upsert": "true" },
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": file.type || "video/mp4",
+        "x-upsert": "true",
+      },
       body: file,
     });
     if (!res.ok) throw new Error(await res.text());
@@ -78,45 +86,39 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
-const MEDALS = ["🥇", "🥈", "🥉"];
+function formatDate(timestamp) {
+  if (!timestamp) return "";
+  const d = new Date(typeof timestamp === "number" ? timestamp : Date.parse(timestamp));
+  return (
+    d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) +
+    " · " +
+    d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+  );
+}
+
 const NEW_USER_SENTINEL = "__new__";
 
-// ── Stepper icons (inline SVG to avoid external asset dependency) ─────────
-function PlusIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M12 5v14M5 12h14" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-    </svg>
-  );
-}
-function MinusIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M5 12h14" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-    </svg>
-  );
-}
+// ── App ───────────────────────────────────────────────────────────────────────
 
 export default function HotdogTracker() {
-  const [tab, setTab] = useState("track");
+  const [tab, setTab] = useState("log");   // "log" | "standings" | "gallery"
+  const [step, setStep] = useState("name"); // "name" | "pin" | "entry"
 
-  // Auth state: null = not logged in, string = logged-in display name
-  const [authedName, setAuthedName] = useState(null);
-
-  // Login form state
+  // Auth state
   const [selectedName, setSelectedName] = useState("");
   const [customName, setCustomName] = useState("");
   const [loginPin, setLoginPin] = useState("");
   const [loginError, setLoginError] = useState("");
   const [isNewUser, setIsNewUser] = useState(null);
   const [confirming, setConfirming] = useState(false);
+  const [authedName, setAuthedName] = useState(null);
 
   // Log form state
   const [count, setCount] = useState(1);
   const [videoFile, setVideoFile] = useState(null);
-  const [videoSrc, setVideoSrc] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [videoState, setVideoState] = useState("default");
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
   // Data
   const [entries, setEntries] = useState([]);
@@ -125,8 +127,6 @@ export default function HotdogTracker() {
   const [processingIds, setProcessingIds] = useState(new Set());
   const [toast, setToast] = useState(null);
 
-  const pinInputRef = useRef(null);
-  const fileInputRef = useRef(null);
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -166,37 +166,37 @@ export default function HotdogTracker() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // ── Login flow ────────────────────────────────────────────────────────
-  const handleNameSelect = async (value) => {
-    setSelectedName(value);
-    setLoginPin(""); setLoginError(""); setIsNewUser(null); setCustomName("");
-    if (!value || value === NEW_USER_SENTINEL) {
-      setIsNewUser(value === NEW_USER_SENTINEL ? true : null);
+  // ── Auth ──────────────────────────────────────────────────────────────────
+
+  const activeName = selectedName === NEW_USER_SENTINEL ? customName.trim() : selectedName;
+
+  const nameOptions = [
+    ...users.map(u => ({ value: u, label: u })),
+    { value: NEW_USER_SENTINEL, label: "New contestant" },
+  ];
+
+  const handleNameConfirm = async () => {
+    if (!activeName) return;
+    setConfirming(true);
+    try {
+      const existingUser = await sb.getUser(activeName);
+      setIsNewUser(!existingUser);
+    } catch {
+      setIsNewUser(selectedName === NEW_USER_SENTINEL);
+    }
+    setLoginPin("");
+    setLoginError("");
+    setConfirming(false);
+    setStep("pin");
+  };
+
+  const handlePinConfirm = async () => {
+    if (!loginPin || loginPin.length < 4) {
+      setLoginError("Enter your 4-digit PIN");
       return;
     }
-    const user = await sb.getUser(value);
-    setIsNewUser(!user);
-    setTimeout(() => pinInputRef.current?.focus(), 80);
-  };
-
-  const handleCustomNameChange = (e) => {
-    const val = e.target.value;
-    setCustomName(val);
-    setLoginPin(""); setLoginError("");
-    setIsNewUser(val.trim().length > 0 ? true : null);
-    if (val.trim().length > 0) setTimeout(() => pinInputRef.current?.focus(), 80);
-  };
-
-  const activeName = selectedName === NEW_USER_SENTINEL
-    ? customName.trim()
-    : (selectedName || customName.trim());
-
-  const showPinField = activeName.length > 0 && isNewUser !== null;
-
-  const handleConfirm = async () => {
-    if (!activeName) { setLoginError("Select or enter your name first"); return; }
-    if (!loginPin || loginPin.length < 4) { setLoginError("Enter your 4-digit PIN"); pinInputRef.current?.focus(); return; }
-    setConfirming(true); setLoginError("");
+    setConfirming(true);
+    setLoginError("");
     try {
       const existingUser = await sb.getUser(activeName);
       if (existingUser) {
@@ -204,7 +204,6 @@ export default function HotdogTracker() {
           setLoginError("Wrong PIN — try again");
           setLoginPin("");
           setConfirming(false);
-          setTimeout(() => pinInputRef.current?.focus(), 50);
           return;
         }
       } else {
@@ -212,24 +211,32 @@ export default function HotdogTracker() {
         setUsers(prev => [...prev, activeName].sort());
       }
       setAuthedName(activeName);
-      setSelectedName(""); setCustomName(""); setLoginPin(""); setIsNewUser(null);
-    } catch (e) {
+      setStep("entry");
+      setSelectedName("");
+      setCustomName("");
+      setLoginPin("");
+      setIsNewUser(null);
+    } catch {
       setLoginError("Something went wrong");
     }
     setConfirming(false);
   };
 
-  // ── Log it flow ───────────────────────────────────────────────────────
-  const handleVideoChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  // ── Submit ────────────────────────────────────────────────────────────────
+
+  const handleFileSelect = (file) => {
     setVideoFile(file);
-    setVideoSrc(URL.createObjectURL(file));
+    setVideoState("uploading");
+    setUploadProgress(0);
   };
 
   const handleSubmit = async () => {
-    if (!videoFile) { showToast("Video proof is required! 📹", "error"); return; }
-    setSubmitting(true); setUploadProgress(0);
+    if (!videoFile) {
+      showToast("Video proof is required! 📹", "error");
+      return;
+    }
+    setSubmitting(true);
+    setUploadProgress(0);
     try {
       const id = generateId();
       showToast("Uploading video...");
@@ -243,16 +250,24 @@ export default function HotdogTracker() {
       setProcessingIds(prev => new Set([...prev, id]));
       setEntries(prev => [entry, ...prev]);
       setUploadProgress(100);
+      setVideoState("filled");
       showToast("Logged! 🌭 GIF converting in the background...");
-      setCount(1); setVideoFile(null); setVideoSrc(null);
-      setTab("leaderboard");
+      // Reset
+      setCount(1);
+      setVideoFile(null);
+      setVideoState("default");
+      setTab("standings");
     } catch (e) {
       showToast("Failed to save: " + e.message, "error");
+      setVideoState("error");
     }
-    setSubmitting(false); setUploadProgress(0);
+    setSubmitting(false);
+    setUploadProgress(0);
   };
 
-  const leaderboard = Object.values(
+  // ── Derived ───────────────────────────────────────────────────────────────
+
+  const standings = Object.values(
     entries.reduce((acc, e) => {
       const k = e.name.toLowerCase();
       if (!acc[k]) acc[k] = { name: e.name, count: 0 };
@@ -263,231 +278,249 @@ export default function HotdogTracker() {
 
   const gallery = entries.filter(e => e.video_path || e.gif_url);
 
+  // ── Render ────────────────────────────────────────────────────────────────
+
   return (
     <div className="app">
 
       {/* ── Header ── */}
       <div className="app-header">
         <h1 className="app-title">Hotdog Slam</h1>
-        <div className="tab-bar">
-          {[
-            { id: "track", label: "Log a dog" },
-            { id: "leaderboard", label: "Leaderboard" },
-            { id: "gallery", label: "Gallery" },
-          ].map(t => (
-            <div
-              key={t.id}
-              className={`tab-item${tab === t.id ? " active" : ""}`}
-              onClick={() => setTab(t.id)}
-            >
-              {t.label}
-              {t.id === "gallery" && processingIds.size > 0 && (
-                <span className="tab-badge">{processingIds.size}</span>
-              )}
-            </div>
-          ))}
-        </div>
       </div>
 
-      <div className="app-body">
+      {/* ── Tab bar + content ── */}
+      <div className="app-content">
+        <TabBar
+          variant="pointing"
+          tabs={[
+            { value: "log",       label: "Log a dog"  },
+            { value: "standings", label: "Standings"  },
+            { value: "gallery",   label: "Gallery"    },
+          ]}
+          value={tab}
+          onChange={val => setTab(val)}
+          style={{ width: "100%", flexShrink: 0 }}
+        />
 
-        {/* ══ TRACK ══ */}
-        {tab === "track" && (
-          <>
-            {/* Step 1: Not logged in → show login card */}
-            {!authedName && (
-              <div className="card">
-                {/* Name dropdown */}
-                <div className="field-group">
-                  <label className="label">Name</label>
-                  <select
-                    className="name-select"
-                    value={selectedName}
-                    onChange={e => handleNameSelect(e.target.value)}
-                  >
-                    <option value="" disabled>Select your name...</option>
-                    {users.map(u => <option key={u} value={u}>{u}</option>)}
-                    <option value={NEW_USER_SENTINEL}>➕ New player...</option>
-                  </select>
-                </div>
+        <div className="app-body">
 
-                {/* New player name input */}
-                {selectedName === NEW_USER_SENTINEL && (
-                  <div className="field-group">
-                    <input
-                      className="text-input"
-                      type="text"
-                      placeholder="Enter your name"
-                      value={customName}
-                      onChange={handleCustomNameChange}
-                      autoFocus
-                    />
+          {/* ══ LOG TAB ══════════════════════════════════════════════════════ */}
+          {tab === "log" && (
+            <>
+
+              {/* Step 1 — Name selection */}
+              {step === "name" && (
+                <div className="ds-card">
+                  <div className="ds-card-header">
+                    <span className="ds-card-title">Who ate?</span>
                   </div>
-                )}
-
-                {/* PIN input */}
-                {showPinField && (
-                  <div className="field-group">
-                    <label className="label">Enter PIN</label>
-                    <input
-                      ref={pinInputRef}
-                      className={`pin-input${loginError ? " has-error" : ""}`}
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      autoComplete="one-time-code"
-                      value={loginPin}
-                      onChange={e => { setLoginPin(e.target.value.replace(/\D/g, "").slice(0, 4)); setLoginError(""); }}
-                      maxLength={4}
-                      placeholder="····"
+                  <div className="ds-card-body">
+                    <Select
+                      label="Name"
+                      options={nameOptions}
+                      value={selectedName}
+                      onChange={val => {
+                        setSelectedName(val);
+                        setCustomName("");
+                        setLoginError("");
+                      }}
+                      placeholder="— Choose —"
                     />
-                    {loginError && <div className="pin-error">{loginError}</div>}
-                  </div>
-                )}
 
-                <button
-                  className={`btn btn-outline${confirming ? " loading" : ""}`}
-                  onClick={handleConfirm}
-                  disabled={confirming}
-                >
-                  {confirming ? "Confirming..." : "Confirm"}
-                </button>
-              </div>
-            )}
+                    {selectedName === NEW_USER_SENTINEL && (
+                      <div style={{ marginTop: 16 }}>
+                        <Input
+                          label="Your name"
+                          placeholder="Enter your name"
+                          value={customName}
+                          onChange={e => setCustomName(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                    )}
 
-            {/* Step 2: Logged in → show full log form */}
-            {authedName && (
-              <>
-                <p className="welcome-heading">Welcome back, {authedName}!</p>
-
-                {/* Count stepper */}
-                <div className="card">
-                  <span className="label">Hot dogs consumed</span>
-                  <div className="stepper-row">
-                    <button className="stepper-btn" onClick={() => setCount(c => Math.max(1, c - 1))}>
-                      <MinusIcon />
-                    </button>
-                    <span className="stepper-count">{count}</span>
-                    <button className="stepper-btn" onClick={() => setCount(c => c + 1)}>
-                      <PlusIcon />
-                    </button>
+                    <div style={{ marginTop: 24 }}>
+                      <Button
+                        buttonStyle="primary"
+                        size="medium"
+                        label={confirming ? "Checking…" : "Confirm"}
+                        loading={confirming}
+                        disabled={!activeName || confirming}
+                        onClick={handleNameConfirm}
+                        style={{ width: "100%" }}
+                      />
+                    </div>
                   </div>
                 </div>
+              )}
 
-                {/* Video upload */}
-                <div className="card">
-                  <span className="label">Video proof (required)</span>
-                  <p className="video-description">
-                    Videos will be auto-converted to sped up gifs and added to the gallery wall.
+              {/* Step 2 — PIN entry */}
+              {step === "pin" && (
+                <div className="ds-card">
+                  <div className="ds-card-header">
+                    <span className="ds-card-title">Who ate?</span>
+                  </div>
+                  <div className="ds-card-body">
+                    {/* Name — tappable to go back */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <span className="ds-field-label">Name</span>
+                      <div
+                        className="ds-name-field"
+                        onClick={() => { setStep("name"); setLoginPin(""); setLoginError(""); }}
+                      >
+                        <span style={{ fontFamily: "Inter, sans-serif", fontSize: 14, color: "var(--text\\/primary, #f0ede6)" }}>
+                          {activeName}
+                        </span>
+                        <span style={{ fontSize: 11, color: "var(--text\\/tertiary, #6b6882)" }}>▾</span>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: 16 }}>
+                      <Input
+                        label={isNewUser ? "Create a four-digit PIN" : "Enter your four-digit PIN"}
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={4}
+                        value={loginPin}
+                        onChange={e => {
+                          setLoginPin(e.target.value.replace(/\D/g, "").slice(0, 4));
+                          setLoginError("");
+                        }}
+                        state={loginError ? "error" : "default"}
+                        hint={loginError}
+                        autoFocus
+                      />
+                    </div>
+
+                    <div style={{ marginTop: 24 }}>
+                      <Button
+                        buttonStyle="primary"
+                        size="medium"
+                        label={confirming ? "Confirming…" : "Confirm"}
+                        loading={confirming}
+                        disabled={loginPin.length < 4 || confirming}
+                        onClick={handlePinConfirm}
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3 — Dog entry form */}
+              {step === "entry" && (
+                <>
+                  <p className="ds-welcome">
+                    Welcome{isNewUser === false ? " back" : " to the league"}, {authedName}!
                   </p>
-                  {!videoSrc ? (
-                    <label className="upload-zone">
-                      <input ref={fileInputRef} type="file" accept="video/*" onChange={handleVideoChange} />
-                      <span className="upload-icon">📹</span>
-                      <span className="upload-hint">Tap to upload video</span>
-                    </label>
-                  ) : (
-                    <div className="video-actions">
-                      <video src={videoSrc} className="video-preview" muted playsInline controls />
-                      <button className="btn btn-ghost" onClick={() => { setVideoFile(null); setVideoSrc(null); }}>
-                        🗑 Remove video
-                      </button>
+
+                  <div className="ds-card">
+                    <div className="ds-card-header">
+                      <span className="ds-card-title">Hot dogs consumed</span>
                     </div>
-                  )}
-                  {submitting && uploadProgress > 0 && uploadProgress < 100 && (
-                    <div className="upload-progress">
-                      <div className="upload-progress-meta">
-                        <span>Uploading...</span>
-                        <span>{uploadProgress}%</span>
-                      </div>
-                      <div className="progress-track">
-                        <div className="progress-fill" style={{ width: `${uploadProgress}%` }} />
-                      </div>
+                    <div className="ds-card-body">
+                      <Stepper value={count} min={1} max={99} onChange={setCount} />
                     </div>
-                  )}
-                </div>
+                  </div>
 
-                <button
-                  className={`btn btn-primary btn-log${submitting ? " loading" : ""}`}
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                >
-                  {submitting ? "Logging..." : "Log it!"}
-                </button>
-              </>
-            )}
-          </>
-        )}
+                  <div className="ds-card">
+                    <div className="ds-card-header">
+                      <span className="ds-card-title">Video proof (required)</span>
+                      <span className="ds-card-subtitle">
+                        Videos will be auto-converted to sped up gifs and added to the gallery wall.
+                      </span>
+                    </div>
+                    <div className="ds-card-body">
+                      <UploadField
+                        state={videoState}
+                        progress={uploadProgress}
+                        filename={videoFile?.name}
+                        onFile={handleFileSelect}
+                        accept="video/*"
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                  </div>
 
-        {/* ══ LEADERBOARD ══ */}
-        {tab === "leaderboard" && (
-          <>
-            <h3 className="section-title">🏆 All-Time Standings</h3>
-            {loadingData ? (
-              <div className="loader-center"><div className="ui active inline loader" /></div>
-            ) : leaderboard.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">🌭</div>
-                <div className="empty-title">No hotdogs logged yet!</div>
-                <div className="empty-sub">Head to Log a dog and be the first</div>
-              </div>
-            ) : leaderboard.map((p, i) => (
-              <div key={p.name} className={`leaderboard-row${i === 0 ? " gold" : ""}`}>
-                <span className={`leaderboard-rank${i < 3 ? " medal" : ""}`}>
-                  {i < 3 ? MEDALS[i] : `#${i + 1}`}
-                </span>
-                <div className="leaderboard-name">{p.name}</div>
-                <div className="leaderboard-count-pill">{p.count} 🌭</div>
-              </div>
-            ))}
-          </>
-        )}
+                  <Button
+                    buttonStyle="primary"
+                    size="medium"
+                    label={submitting ? "Logging…" : "Log it!"}
+                    loading={submitting}
+                    disabled={submitting || !videoFile || videoState === "uploading"}
+                    onClick={handleSubmit}
+                    style={{ width: "100%" }}
+                  />
+                </>
+              )}
 
-        {/* ══ GALLERY ══ */}
-        {tab === "gallery" && (
-          <>
-            <h3 className="section-title">🎞 GIF Gallery</h3>
-            {loadingData ? (
-              <div className="loader-center"><div className="ui active inline loader" /></div>
-            ) : gallery.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">🎬</div>
-                <div className="empty-title">No GIFs here yet!</div>
-                <div className="empty-sub">Upload a video when logging hotdogs</div>
+            </>
+          )}
+
+          {/* ══ STANDINGS TAB ════════════════════════════════════════════════ */}
+          {tab === "standings" && (
+            <div className="ds-card ds-card-shadow">
+              <div className="ds-card-header">
+                <span className="ds-card-title">Standings</span>
               </div>
-            ) : (
-              <div className="gallery-grid">
-                {gallery.map(e => {
-                  const isProcessing = processingIds.has(e.id) || (!e.gif_url && e.video_path);
-                  return (
-                    <div key={e.id} className="gallery-item">
-                      {e.gif_url ? (
-                        <img src={e.gif_url} alt={e.name} className="gallery-gif" />
-                      ) : (
-                        <div className="gallery-processing">
-                          <div className="ui active inline inverted loader" />
-                          <div className="gallery-processing-label">Converting...</div>
-                        </div>
-                      )}
-                      <div className="gallery-caption">
-                        {e.name} · {e.count} 🌭
-                        {isProcessing && !e.gif_url && " ⏳"}
+              <div className="ds-card-body" style={{ padding: "8px 20px" }}>
+                {loadingData ? (
+                  <p className="ds-empty">Loading…</p>
+                ) : standings.length === 0 ? (
+                  <p className="ds-empty">No entries yet — be the first! 🌭</p>
+                ) : (
+                  standings.map((p, i) => (
+                    <div key={p.name}>
+                      {i > 0 && <Divider />}
+                      <div className="ds-standings-row">
+                        <span className="ds-standings-name">{p.name}</span>
+                        <span className="ds-standings-count">{p.count} dog{p.count !== 1 ? "s" : ""}</span>
                       </div>
                     </div>
-                  );
-                })}
+                  ))
+                )}
               </div>
-            )}
-          </>
-        )}
+            </div>
+          )}
+
+          {/* ══ GALLERY TAB ══════════════════════════════════════════════════ */}
+          {tab === "gallery" && (
+            <>
+              {loadingData ? (
+                <p className="ds-empty">Loading…</p>
+              ) : gallery.length === 0 ? (
+                <p className="ds-empty">No GIFs yet — upload a video when logging! 🎬</p>
+              ) : (
+                gallery.map(e => (
+                  <GifTile
+                    key={e.id}
+                    state={e.gif_url ? "default" : "loading"}
+                    gifUrl={e.gif_url}
+                    name={e.name}
+                    count={e.count}
+                    date={formatDate(e.timestamp)}
+                    progress={processingIds.has(e.id) ? 50 : undefined}
+                    style={{ width: "100%" }}
+                  />
+                ))
+              )}
+            </>
+          )}
+
+        </div>
       </div>
 
       {/* ── Toast ── */}
       {toast && (
-        <div className={`ui message toast${toast.type === "error" ? " red" : " green"}`}>
-          {toast.msg}
+        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 1000 }}>
+          <Toast
+            type={toast.type === "error" ? "error" : "success"}
+            message={toast.msg}
+            onClose={() => setToast(null)}
+          />
         </div>
       )}
+
     </div>
   );
 }

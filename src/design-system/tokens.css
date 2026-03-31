@@ -1,0 +1,301 @@
+/*
+ * Hot Dog DS — Design Tokens
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Three-layer architecture:
+ *
+ *   Layer 1 — Primitives   raw named hex values, no semantic meaning
+ *   Layer 2 — Semantic     surface / text / brand / semantic intent aliases
+ *   Layer 3 — Component    per-component aliases into semantic layer
+ *
+ * Usage
+ *   @import './tokens.css';
+ *
+ * Dark mode default, light mode via [data-theme="light"] on <html> or <body>.
+ * To flip the default, swap the :root and [data-theme="light"] blocks.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+
+/* ============================================================
+   LAYER 1 — PRIMITIVES
+   Raw hex values. Never use these directly in components.
+   Reference them only from the semantic layer below.
+   ============================================================ */
+
+:root {
+  /* Neutral scale */
+  --prim-neutral-0:     #ffffff;
+  --prim-neutral-50:    #f5f4f0;
+  --prim-neutral-100:   #eceae4;
+  --prim-neutral-150:   #e2e0da;
+  --prim-neutral-200:   #d0cec8;
+  --prim-neutral-300:   #b8b6b0;
+  --prim-neutral-400:   #8a8898;
+  --prim-neutral-500:   #6b6882;
+  --prim-neutral-600:   #4a4860;
+  --prim-neutral-700:   #3a3a52;
+  --prim-neutral-800:   #2e2e40;
+  --prim-neutral-850:   #242432;
+  --prim-neutral-900:   #1e1e28;
+  --prim-neutral-950:   #16161d;
+  --prim-neutral-975:   #0f0f13;
+  --prim-neutral-1000:  #000000;
+  --prim-neutral-cream: #f0ede6;  /* warm off-white, light text on dark */
+  --prim-neutral-ink:   #1a1918;  /* warm near-black, dark text on light */
+
+  /* Amber */
+  --prim-amber-400:         #e8a44a;
+  --prim-amber-500:         #c4853a;
+  --prim-amber-600:         #a06828;
+  --prim-amber-subtle-dark: #2a1e08;
+  --prim-amber-subtle-light:#fdf3e3;
+
+  /* Green */
+  --prim-green-400:         #5bba6f;
+  --prim-green-500:         #2e8b3f;
+  --prim-green-subtle-dark: #0a1f0d;
+  --prim-green-subtle-light:#eaf6ec;
+
+  /* Red */
+  --prim-red-400:           #e85c5c;
+  --prim-red-500:           #c43030;
+  --prim-red-subtle-dark:   #2a0808;
+  --prim-red-subtle-light:  #fdeaea;
+
+  /* Blue */
+  --prim-blue-400:          #5b9ee8;
+  --prim-blue-500:          #2266c4;
+  --prim-blue-subtle-dark:  #081828;
+  --prim-blue-subtle-light: #eaf2fd;
+
+  /* Teal */
+  --prim-teal-400: #4ecdc4;
+  --prim-teal-500: #1a9e95;
+
+  /* Coral */
+  --prim-coral-400: #e8734a;
+  --prim-coral-500: #c4542a;
+
+  /* Lavender */
+  --prim-lavender-400: #9b8ec4;
+  --prim-lavender-500: #6d5fa0;
+}
+
+
+/* ============================================================
+   LAYER 2 — SEMANTIC TOKENS (Dark mode — default)
+   Border intent tokens sit here, aliasing surface/* and semantic/*
+   All values alias into primitives.
+   ============================================================ */
+
+:root {
+  /* Surface */
+  --surface\/bg-primary:     var(--prim-neutral-975);
+  --surface\/bg-secondary:   var(--prim-neutral-950);
+  --surface\/bg-tertiary:    var(--prim-neutral-900);
+  --surface\/bg-surface:     var(--prim-neutral-850);
+  --surface\/bg-inverse:     var(--prim-neutral-0);
+  --surface\/border-default: var(--prim-neutral-800);
+  --surface\/border-strong:  var(--prim-neutral-700);
+
+  /* Text */
+  --text\/primary:   var(--prim-neutral-cream);
+  --text\/secondary: var(--prim-neutral-500);
+  --text\/tertiary:  var(--prim-neutral-500);
+  --text\/disabled:  var(--prim-neutral-600);
+  --text\/inverse:   var(--prim-neutral-975);
+
+  /* Brand */
+  --brand\/amber:        var(--prim-amber-400);
+  --brand\/amber-hover:  var(--prim-amber-500);
+  --brand\/amber-subtle: var(--prim-amber-subtle-dark);
+  --brand\/teal:         var(--prim-teal-400);
+  --brand\/coral:        var(--prim-coral-400);
+  --brand\/lavender:     var(--prim-lavender-400);
+
+  /* Semantic intent */
+  --semantic\/success:        var(--prim-green-400);
+  --semantic\/success-subtle: var(--prim-green-subtle-dark);
+  --semantic\/warning:        var(--prim-amber-400);
+  --semantic\/warning-subtle: var(--prim-amber-subtle-dark);
+  --semantic\/danger:         var(--prim-red-400);
+  --semantic\/danger-subtle:  var(--prim-red-subtle-dark);
+  --semantic\/info:           var(--prim-blue-400);
+  --semantic\/info-subtle:    var(--prim-blue-subtle-dark);
+
+  /* Border intent — semantic aliases for border use cases */
+  --border\/default: var(--surface\/border-default);
+  --border\/strong:  var(--surface\/border-strong);
+  --border\/focus:   var(--brand\/amber);
+  --border\/error:   var(--semantic\/danger);
+  --border\/success: var(--semantic\/success);
+  --border\/warning: var(--semantic\/warning);
+  --border\/info:    var(--semantic\/info);
+}
+
+/* Light mode override */
+[data-theme="light"] {
+  /* Surface */
+  --surface\/bg-primary:     var(--prim-neutral-0);
+  --surface\/bg-secondary:   var(--prim-neutral-50);
+  --surface\/bg-tertiary:    var(--prim-neutral-100);
+  --surface\/bg-surface:     var(--prim-neutral-150);
+  --surface\/bg-inverse:     var(--prim-neutral-ink);
+  --surface\/border-default: var(--prim-neutral-200);
+  --surface\/border-strong:  var(--prim-neutral-300);
+
+  /* Text */
+  --text\/primary:   var(--prim-neutral-ink);
+  --text\/secondary: var(--prim-neutral-500);
+  --text\/tertiary:  var(--prim-neutral-400);
+  --text\/disabled:  var(--prim-neutral-300);
+  --text\/inverse:   var(--prim-neutral-cream);
+
+  /* Brand */
+  --brand\/amber:        var(--prim-amber-500);
+  --brand\/amber-hover:  var(--prim-amber-600);
+  --brand\/amber-subtle: var(--prim-amber-subtle-light);
+  --brand\/teal:         var(--prim-teal-500);
+  --brand\/coral:        var(--prim-coral-500);
+  --brand\/lavender:     var(--prim-lavender-500);
+
+  /* Semantic intent */
+  --semantic\/success:        var(--prim-green-500);
+  --semantic\/success-subtle: var(--prim-green-subtle-light);
+  --semantic\/warning:        var(--prim-amber-500);
+  --semantic\/warning-subtle: var(--prim-amber-subtle-light);
+  --semantic\/danger:         var(--prim-red-500);
+  --semantic\/danger-subtle:  var(--prim-red-subtle-light);
+  --semantic\/info:           var(--prim-blue-500);
+  --semantic\/info-subtle:    var(--prim-blue-subtle-light);
+
+  /* Border intent — inherit same structure, values swap via semantic layer */
+  --border\/default: var(--surface\/border-default);
+  --border\/strong:  var(--surface\/border-strong);
+  --border\/focus:   var(--brand\/amber);
+  --border\/error:   var(--semantic\/danger);
+  --border\/success: var(--semantic\/success);
+  --border\/warning: var(--semantic\/warning);
+  --border\/info:    var(--semantic\/info);
+}
+
+
+/* ============================================================
+   LAYER 3 — COMPONENT TOKENS
+   All values alias into the semantic layer above.
+   Never reference primitives directly here.
+   ============================================================ */
+
+:root {
+  /* ── Buttons ─────────────────────────────────────────── */
+  --component\/btn-primary-bg:       var(--brand\/amber);
+  --component\/btn-primary-bg-hover: var(--brand\/amber-hover);
+  --component\/btn-primary-text:     var(--surface\/bg-primary);
+  --component\/btn-secondary-bg:     var(--surface\/bg-tertiary);
+  --component\/btn-secondary-text:   var(--text\/primary);
+  --component\/btn-secondary-border: var(--border\/strong);
+
+  /* ── Inputs ──────────────────────────────────────────── */
+  --component\/input-bg:             var(--surface\/bg-tertiary);
+  --component\/input-bg-focus:       var(--surface\/bg-secondary);
+  --component\/input-border:         var(--border\/strong);
+  --component\/input-border-focus:   var(--border\/focus);
+  --component\/input-bg-error:       var(--semantic\/danger-subtle);
+  --component\/input-border-error:   var(--border\/error);
+  --component\/input-bg-success:     var(--semantic\/success-subtle);
+  --component\/input-border-success: var(--border\/success);
+
+  /* ── Tabs ────────────────────────────────────────────── */
+  --component\/tab-bg-default:    var(--surface\/bg-tertiary);
+  --component\/tab-bg-active:     var(--surface\/bg-secondary);
+  --component\/tab-bg-hover:      var(--surface\/bg-surface);
+  --component\/tab-border:        var(--border\/default);
+  --component\/tab-indicator:     var(--brand\/amber);
+  --component\/tab-text-default:  var(--text\/secondary);
+  --component\/tab-text-active:   var(--text\/primary);
+  --component\/tab-text-hover:    var(--text\/primary);
+  --component\/tab-text-disabled: var(--text\/disabled);
+
+  /* ── Cards ───────────────────────────────────────────── */
+  --component\/card-bg:            var(--surface\/bg-secondary);
+  --component\/card-bg-elevated:   var(--surface\/bg-tertiary);
+  --component\/card-border:        var(--border\/default);
+  --component\/card-header-bg:     var(--surface\/bg-tertiary);
+  --component\/card-header-border: var(--border\/default);
+  --component\/card-shadow:        #000000; /* raw — shadows are always black */
+
+  /* ── Toasts ──────────────────────────────────────────── */
+  --component\/toast-bg-info:      var(--semantic\/info-subtle);
+  --component\/toast-bg-success:   var(--semantic\/success-subtle);
+  --component\/toast-bg-warning:   var(--semantic\/warning-subtle);
+  --component\/toast-bg-error:     var(--semantic\/danger-subtle);
+  --component\/toast-bar-info:     var(--semantic\/info);
+  --component\/toast-bar-success:  var(--semantic\/success);
+  --component\/toast-bar-warning:  var(--semantic\/warning);
+  --component\/toast-bar-error:    var(--semantic\/danger);
+  --component\/toast-border:       var(--border\/default);
+  --component\/toast-close:        var(--text\/tertiary);
+
+  /* ── Upload Field ────────────────────────────────────── */
+  --component\/upload-border-default: var(--border\/strong);
+  --component\/upload-border-hover:   var(--border\/focus);
+  --component\/upload-border-error:   var(--border\/error);
+  --component\/upload-border-success: var(--border\/success);
+}
+
+
+/* ============================================================
+   SPACING & RADIUS TOKENS
+   ============================================================ */
+
+:root {
+  --spacing\/1: 4px;
+  --spacing\/2: 8px;
+  --spacing\/3: 12px;
+  --spacing\/4: 16px;
+  --spacing\/5: 24px;
+  --spacing\/6: 32px;
+  --spacing\/7: 48px;
+  --spacing\/8: 64px;
+  --spacing\/9: 96px;
+
+  --radius\/xs:   2px;
+  --radius\/sm:   4px;
+  --radius\/md:   6px;
+  --radius\/base: 8px;   /* interactive elements: stepper buttons, upload zone */
+  --radius\/lg:   10px;
+  --radius\/xl:   16px;
+  --radius\/pill: 9999px;
+}
+
+
+/* ============================================================
+   TYPOGRAPHY REFERENCE
+   Not applied as CSS custom properties (type is handled via
+   font-* properties directly), but documented here for reference.
+   All type uses Inter with these scales:
+   ============================================================
+
+   Style                   Size   Weight      Line-height
+   ─────────────────────────────────────────────────────────
+   Type/Display            48px   Bold        58px
+   Type/H1                 36px   Bold        44px
+   Type/H2                 28px   Semi Bold   36px
+   Type/H3                 22px   Semi Bold   30px
+   Type/H4                 18px   Medium      26px
+   Type/Body-LG            16px   Regular     26px
+   Type/Body               15px   Regular     24px
+   Type/Body-Emphasis   ★  14px   Semi Bold   20px   (new)
+   Type/Form-Body          14px   Regular     20px
+   Type/Tab-Label          14px   Medium      20px
+   Type/Body-SM-Emphasis ★ 13px   Semi Bold   18px   (new)
+   Type/Body-SM            13px   Regular     20px
+   Type/Card-Subtitle      13px   Regular     18px
+   Type/Form-Label         12px   Semi Bold   18px
+   Type/Caption            11px   Regular     16px
+   Type/Label              11px   Semi Bold   16px
+   Type/Form-Check         11px   Bold        14px
+   Type/Code               13px   Regular     20px   (monospace intent)
+
+   ★ New styles added in this audit pass.
+   ============================================================ */
