@@ -1,5 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import ReactDOM from "react-dom";
+import React, { useState } from "react";
 
 // ── Types ─────────────────────────────────────────────
 
@@ -22,163 +21,15 @@ export interface SelectProps {
   style?:       React.CSSProperties;
 }
 
-// ── Token maps ────────────────────────────────────────
-
-const FIELD_BG: Record<SelectState, string> = {
-  default:  "var(--component\\/input-bg, #1e1e28)",
-  open:     "var(--component\\/input-bg-focus, #16161d)",
-  selected: "var(--component\\/input-bg, #1e1e28)",
-  error:    "var(--component\\/input-bg-error, #2a0808)",
-  disabled: "var(--surface\\/bg-primary, #0f0f13)",
-};
-
-const FIELD_BORDER: Record<SelectState, string> = {
-  default:  "1px solid var(--component\\/input-border, #3a3a52)",
-  open:     "2px solid var(--component\\/input-border-focus, #e8a44a)",
-  selected: "1px solid var(--component\\/input-border, #3a3a52)",
-  error:    "1px solid var(--component\\/input-border-error, #e85c5c)",
-  disabled: "1px solid var(--surface\\/border-default, #2e2e40)",
-};
-
-const VALUE_COLOR: Record<SelectState, string> = {
-  default:  "var(--text\\/tertiary, #6b6882)",
-  open:     "var(--text\\/primary, #f0ede6)",
-  selected: "var(--text\\/primary, #f0ede6)",
-  error:    "var(--text\\/tertiary, #6b6882)",
-  disabled: "var(--text\\/disabled, #4a4860)",
-};
-
-const CHEVRON_COLOR: Record<SelectState, string> = {
-  default:  "var(--text\\/tertiary, #6b6882)",
-  open:     "var(--text\\/tertiary, #6b6882)",
-  selected: "var(--text\\/tertiary, #6b6882)",
-  error:    "var(--semantic\\/danger, #e85c5c)",
-  disabled: "var(--text\\/tertiary, #6b6882)",
-};
-
-const FIELD_PADDING: Record<SelectState, string> = {
-  default:  "9px 12px",
-  open:     "9px 12px",
-  selected: "9px 12px",
-  error:    "12px",   // matches spacing/3 — aligns with input error
-  disabled: "9px 12px",
-};
-
-// ── Default options ───────────────────────────────────
-
-const DEFAULT_OPTIONS: SelectOption[] = [
-  { label: "Design",      value: "design"      },
-  { label: "Engineering", value: "engineering" },
-  { label: "Marketing",   value: "marketing"   },
-];
-
-// ── SelectOption sub-component ────────────────────────
-
-interface OptionItemProps {
-  option:   SelectOption;
-  active?:  boolean;
-  onSelect: (value: string) => void;
-}
-
-function OptionItem({ option, active = false, onSelect }: OptionItemProps) {
-  const [hovered, setHovered] = useState(false);
-
-  const style: React.CSSProperties = {
-    display:    "flex",
-    alignItems: "center",
-    padding:    "8px 12px",
-    height:     "36px",
-    flexShrink: 0,
-    width:      "100%",
-    background: active
-      ? "var(--brand\\/amber-subtle, #2a1e08)"
-      : hovered
-      ? "var(--surface\\/bg-surface, #242432)"
-      : "transparent",
-    cursor:     "pointer",
-    boxSizing:  "border-box",
-  };
-
-  const labelStyle: React.CSSProperties = {
-    flex:         "1 0 0",
-    fontFamily:   "Inter, sans-serif",
-    fontSize:     "14px",
-    fontWeight:   400,
-    lineHeight:   "20px",
-    height:       "20px",
-    overflow:     "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace:   "nowrap",
-    minWidth:     0,
-    color:        active
-      ? "var(--brand\\/amber, #e8a44a)"
-      : "var(--text\\/secondary, #9e9bb4)",
-  };
-
-  return (
-    <div
-      style={style}
-      role="option"
-      aria-selected={active}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={() => onSelect(option.value)}
-    >
-      <span style={labelStyle}>{option.label}</span>
-    </div>
-  );
-}
-
-// ── SelectDropdownPanel sub-component ────────────────
-// Rendered via portal into document.body so it escapes
-// any parent overflow:hidden (e.g. card containers).
-
-interface DropdownPanelProps {
-  options:        SelectOption[];
-  selectedValue?: string;
-  onSelect:       (value: string) => void;
-  anchorRect:     DOMRect | null;
-}
-
-function DropdownPanel({ options, selectedValue, onSelect, anchorRect }: DropdownPanelProps) {
-  if (!anchorRect) return null;
-
-  const style: React.CSSProperties = {
-    position:     "fixed",
-    top:          anchorRect.bottom + 4,
-    left:         anchorRect.left,
-    width:        anchorRect.width,
-    background:   "var(--surface\\/bg-tertiary, #1e1e28)",
-    border:       "1px solid var(--component\\/input-border, #3a3a52)",
-    borderRadius: "var(--radius\\/md, 6px)",
-    overflow:     "hidden",
-    paddingTop:   "4px",
-    paddingBottom:"4px",
-    zIndex:       9999,
-    boxSizing:    "border-box",
-  };
-
-  return ReactDOM.createPortal(
-    <div style={style} role="listbox" data-select-portal="true">
-      {options.map(opt => (
-        <OptionItem
-          key={opt.value}
-          option={opt}
-          active={opt.value === selectedValue}
-          onSelect={onSelect}
-        />
-      ))}
-    </div>,
-    document.body
-  );
-}
-
 // ── Select ────────────────────────────────────────────
+// Uses the native OS <select> for the dropdown panel.
+// The field wrapper matches DS token styling; the picker
+// itself is rendered by the operating system.
 
 export default function Select({
   state       = "default",
   label       = "Category",
-  options     = DEFAULT_OPTIONS,
+  options     = [],
   value,
   placeholder = "— Choose —",
   errorText   = "This field is required",
@@ -186,169 +37,136 @@ export default function Select({
   className,
   style,
 }: SelectProps) {
-  const [isOpen, setIsOpen]         = useState(false);
-  const [selected, setSelected]     = useState<string | undefined>(value);
-  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
-  const wrapperRef                  = useRef<HTMLDivElement>(null);
-  const fieldRef                    = useRef<HTMLDivElement>(null);
+  const [internalValue, setInternalValue] = useState<string>("");
 
-  const isDisabled     = state === "disabled";
-  const isError        = state === "error";
-  const currentValue   = value ?? selected;
-  const selectedOption = options.find(o => o.value === currentValue);
+  const isDisabled   = state === "disabled";
+  const isError      = state === "error";
+  const currentValue = value ?? internalValue;
+  const hasValue     = !!currentValue;
 
-  // Derive display state
-  const displayState: SelectState = isDisabled ? "disabled"
-    : isError        ? "error"
-    : isOpen         ? "open"
-    : currentValue   ? "selected"
+  // Derive display state for token lookups
+  const stateKey = isDisabled ? "disabled"
+    : isError    ? "error"
+    : hasValue   ? "selected"
     : "default";
 
-  // Measure field for portal positioning
-  const updateAnchorRect = useCallback(() => {
-    if (fieldRef.current) {
-      setAnchorRect(fieldRef.current.getBoundingClientRect());
-    }
-  }, []);
-
-  // Close on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        // Also check if the click was inside the portal dropdown
-        const target = e.target as Element;
-        if (!target.closest('[data-select-portal]')) {
-          setIsOpen(false);
-        }
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  // Reposition on scroll/resize
-  useEffect(() => {
-    if (!isOpen) return;
-    const update = () => updateAnchorRect();
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
-    };
-  }, [isOpen, updateAnchorRect]);
-
-  const handleToggle = () => {
-    if (isDisabled) return;
-    updateAnchorRect();
-    setIsOpen(prev => !prev);
+  const FIELD_BG: Record<string, string> = {
+    default:  "var(--component\\/input-bg, #1e1e28)",
+    selected: "var(--component\\/input-bg, #1e1e28)",
+    error:    "var(--component\\/input-bg-error, #2a0808)",
+    disabled: "var(--surface\\/bg-primary, #0f0f13)",
   };
 
-  const handleSelect = (val: string) => {
-    setSelected(val);
-    setIsOpen(false);
+  const FIELD_BORDER: Record<string, string> = {
+    default:  "1px solid var(--component\\/input-border, #3a3a52)",
+    selected: "1px solid var(--component\\/input-border, #3a3a52)",
+    error:    "1px solid var(--component\\/input-border-error, #e85c5c)",
+    disabled: "1px solid var(--surface\\/border-default, #2e2e40)",
+  };
+
+  const VALUE_COLOR: Record<string, string> = {
+    default:  "var(--text\\/tertiary, #6b6882)",
+    selected: "var(--text\\/primary, #f0ede6)",
+    error:    "var(--text\\/tertiary, #6b6882)",
+    disabled: "var(--text\\/disabled, #4a4860)",
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setInternalValue(val);
     onChange?.(val);
   };
 
-  const wrapperStyle: React.CSSProperties = {
-    display:    "flex",
-    flexDirection: "column",
-    gap:        "6px",
-    alignItems: "flex-start",
-    position:   "relative",
-    width:      "100%",
-    ...style,
-  };
-
-  const fieldStyle: React.CSSProperties = {
-    display:        "flex",
-    alignItems:     "center",
-    justifyContent: "space-between",
-    overflow:       "hidden",
-    padding:        FIELD_PADDING[displayState],
-    borderRadius:   "var(--radius\\/md, 6px)",
-    flexShrink:     0,
-    width:          "100%",
-    background:     FIELD_BG[displayState],
-    border:         FIELD_BORDER[displayState],
-    opacity:        isDisabled ? 0.5 : 1,
-    cursor:         isDisabled ? "not-allowed" : "pointer",
-    whiteSpace:     "nowrap",
-    boxSizing:      "border-box",
-  };
-
-  const labelStyle: React.CSSProperties = {
-    fontFamily: "Inter, sans-serif",
-    fontSize:   "12px",
-    fontWeight: 600,
-    lineHeight: "18px",
-    color:      "var(--text\\/secondary, #9e9bb4)",
-    width:      "100%",
-    flexShrink: 0,
-    margin:     0,
-  };
-
-  const valueStyle: React.CSSProperties = {
-    flex:         "1 0 0",
-    fontFamily:   "Inter, sans-serif",
-    fontSize:     "14px",
-    fontWeight:   400,
-    lineHeight:   "20px",
-    height:       "20px",
-    overflow:     "hidden",
-    textOverflow: "ellipsis",
-    color:        VALUE_COLOR[displayState],
-    minWidth:     0,
-  };
-
-  const chevronStyle: React.CSSProperties = {
-    fontFamily: "Inter, sans-serif",
-    fontSize:   "11px",
-    lineHeight: "16px",
-    color:      CHEVRON_COLOR[displayState],
-    flexShrink: 0,
-  };
-
-  const hintStyle: React.CSSProperties = {
-    fontFamily: "Inter, sans-serif",
-    fontSize:   "11px",
-    fontWeight: 400,
-    lineHeight: "16px",
-    color:      "var(--semantic\\/danger, #e85c5c)",
-    width:      "100%",
-    flexShrink: 0,
-    margin:     0,
-  };
-
   return (
-    <div ref={wrapperRef} className={className} style={wrapperStyle}>
-      <p style={labelStyle}>{label}</p>
+    <div className={className} style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%", ...style }}>
 
-      <div
-        ref={fieldRef}
-        style={fieldStyle}
-        role="combobox"
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
-        aria-disabled={isDisabled}
-        onClick={handleToggle}
-      >
-        <span style={valueStyle}>
-          {selectedOption?.label ?? placeholder}
+      {/* Label */}
+      <p style={{
+        fontFamily: "Inter, sans-serif",
+        fontSize:   "12px",
+        fontWeight: 600,
+        lineHeight: "18px",
+        color:      "var(--text\\/secondary, #9e9bb4)",
+        margin:     0,
+      }}>
+        {label}
+      </p>
+
+      {/* Field wrapper — positions the custom chevron over the native select */}
+      <div style={{ position: "relative", width: "100%", flexShrink: 0 }}>
+
+        <select
+          value={currentValue}
+          disabled={isDisabled}
+          onChange={handleChange}
+          aria-invalid={isError}
+          style={{
+            display:          "block",
+            width:            "100%",
+            padding:          "9px 36px 9px 12px",
+            boxSizing:        "border-box",
+            background:       FIELD_BG[stateKey],
+            border:           FIELD_BORDER[stateKey],
+            borderRadius:     "var(--radius\\/md, 6px)",
+            color:            VALUE_COLOR[stateKey],
+            fontFamily:       "Inter, sans-serif",
+            fontSize:         "14px",
+            fontWeight:       400,
+            lineHeight:       "20px",
+            // Hide the browser's native arrow — we render our own
+            appearance:       "none",
+            WebkitAppearance: "none",
+            MozAppearance:    "none",
+            cursor:           isDisabled ? "not-allowed" : "pointer",
+            opacity:          isDisabled ? 0.5 : 1,
+            outline:          "none",
+            transition:       "border-color 0.15s ease, background 0.15s ease",
+          }}
+        >
+          {/* Disabled hidden placeholder so the field shows placeholder text
+              when nothing is selected, but it can't be re-selected */}
+          <option value="" disabled hidden>{placeholder}</option>
+
+          {options.map(opt => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+
+        {/* Custom chevron — pointer-events: none so clicks pass through to the select */}
+        <span aria-hidden style={{
+          position:      "absolute",
+          right:         "12px",
+          top:           "50%",
+          transform:     "translateY(-50%)",
+          pointerEvents: "none",
+          fontFamily:    "Inter, sans-serif",
+          fontSize:      "11px",
+          lineHeight:    "16px",
+          color:         isError
+            ? "var(--semantic\\/danger, #e85c5c)"
+            : "var(--text\\/tertiary, #6b6882)",
+          userSelect:    "none",
+        }}>
+          ▾
         </span>
-        <span style={chevronStyle}>{isOpen ? "▴" : "▾"}</span>
       </div>
 
-      {isError && <p style={hintStyle}>{errorText}</p>}
-
-      {isOpen && !isDisabled && (
-        <DropdownPanel
-          options={options}
-          selectedValue={currentValue}
-          onSelect={handleSelect}
-          anchorRect={anchorRect}
-        />
+      {/* Error hint */}
+      {isError && (
+        <p style={{
+          fontFamily: "Inter, sans-serif",
+          fontSize:   "11px",
+          fontWeight: 400,
+          lineHeight: "16px",
+          color:      "var(--semantic\\/danger, #e85c5c)",
+          margin:     0,
+        }}>
+          {errorText}
+        </p>
       )}
+
     </div>
   );
 }
