@@ -1,0 +1,3 @@
+
+[functions.upload-video]
+verify_jwt = false
