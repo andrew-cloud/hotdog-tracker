@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import * as tus from "tus-js-client";
 import "./App.css";
 import { Button, Input, Stepper, UploadField, GifTile, Toast, Divider, TabBar, Select } from "./design-system";
 
@@ -29,20 +30,8 @@ const sb = {
     return res.json();
   },
   async uploadVideo(id, file) {
-    const ext = file.name.split(".").pop() || "mp4";
-    const path = `${id}.${ext}`;
-    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/videos/${path}`, {
-      method: "POST",
-      headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": file.type || "video/mp4",
-        "x-upsert": "true",
-      },
-      body: file,
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return path;
+    // Kept for reference — actual upload now handled by uploadVideoTus() below
+    throw new Error("Use uploadVideoTus() instead");
   },
   async triggerGifConversion(entryId, videoPath) {
     const res = await fetch(EDGE_FUNCTION_URL, {
@@ -82,6 +71,51 @@ const sb = {
   },
 };
 
+// ── TUS chunked upload ────────────────────────────────────────────────────────
+// Splits large video files into 6 MB chunks, uploads resumably, and reports
+// real byte-level progress. Works with Supabase Storage's TUS endpoint.
+
+function uploadVideoTus(id, file, onProgress) {
+  const ext = file.name.split(".").pop() || "mp4";
+  const path = `${id}.${ext}`;
+
+  return new Promise((resolve, reject) => {
+    const upload = new tus.Upload(file, {
+      // Supabase TUS endpoint
+      endpoint: `${SUPABASE_URL}/storage/v1/upload/resumable`,
+      retryDelays: [0, 3000, 5000, 10000, 20000],
+      headers: {
+        authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        apikey: SUPABASE_ANON_KEY,
+      },
+      // Send data alongside the creation request (fewer round-trips)
+      uploadDataDuringCreation: true,
+      // Clean up fingerprint after success so re-uploads start fresh
+      removeFingerprintOnSuccess: true,
+      metadata: {
+        bucketName: "videos",
+        objectName: path,
+        contentType: file.type || "video/mp4",
+        cacheControl: "3600",
+      },
+      // 6 MB chunks — Supabase minimum is 5 MB for multipart
+      chunkSize: 6 * 1024 * 1024,
+      onError: reject,
+      onProgress: (bytesUploaded, bytesTotal) => {
+        const pct = Math.round((bytesUploaded / bytesTotal) * 100);
+        onProgress?.(pct);
+      },
+      onSuccess: () => resolve(path),
+    });
+
+    // Resume a previous interrupted upload if one exists
+    upload.findPreviousUploads().then((prev) => {
+      if (prev.length) upload.resumeFromPreviousUpload(prev[0]);
+      upload.start();
+    });
+  });
+}
+
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
@@ -101,7 +135,7 @@ const NEW_USER_SENTINEL = "__new__";
 // ── App ───────────────────────────────────────────────────────────────────────
 
 export default function HotdogTracker() {
-  const [tab, setTab] = useState("log");   // "log" | "standings" | "gallery"
+  const [tab, setTab] = useState("log");    // "log" | "standings" | "gallery"
   const [step, setStep] = useState("name"); // "name" | "pin" | "entry"
 
   // Auth state
@@ -224,10 +258,10 @@ export default function HotdogTracker() {
 
   // ── Submit ────────────────────────────────────────────────────────────────
 
+  // File selected by user — mark as ready, upload happens on submit
   const handleFileSelect = (file) => {
     setVideoFile(file);
-    setVideoState("uploading");
-    setUploadProgress(0);
+    setVideoState("filled");
   };
 
   const handleSubmit = async () => {
@@ -240,29 +274,44 @@ export default function HotdogTracker() {
     try {
       const id = generateId();
       showToast("Uploading video...");
-      setUploadProgress(30);
-      const video_path = await sb.uploadVideo(id, videoFile);
-      setUploadProgress(70);
-      const entry = { id, name: authedName, count: Number(count), timestamp: Date.now(), gif_url: null, video_path };
+
+      // Chunked TUS upload — real byte-level progress 0→100
+      const video_path = await uploadVideoTus(id, videoFile, (pct) => {
+        setUploadProgress(pct);
+        setVideoState("uploading");
+      });
+      setUploadProgress(100);
+      setVideoState("filled");
+
+      // Insert entry row
+      const entry = {
+        id,
+        name: authedName,
+        count: Number(count),
+        timestamp: Date.now(),
+        gif_url: null,
+        video_path,
+      };
       await sb.insertEntry(entry);
-      setUploadProgress(90);
+
+      // Kick off background GIF conversion via edge function
       await sb.triggerGifConversion(id, video_path);
       setProcessingIds(prev => new Set([...prev, id]));
       setEntries(prev => [entry, ...prev]);
-      setUploadProgress(100);
-      setVideoState("filled");
+
       showToast("Logged! 🌭 GIF converting in the background...");
-      // Reset
+
+      // Reset form and navigate to standings
       setCount(1);
       setVideoFile(null);
       setVideoState("default");
+      setUploadProgress(0);
       setTab("standings");
     } catch (e) {
       showToast("Failed to save: " + e.message, "error");
       setVideoState("error");
     }
     setSubmitting(false);
-    setUploadProgress(0);
   };
 
   // ── Derived ───────────────────────────────────────────────────────────────
@@ -310,7 +359,7 @@ export default function HotdogTracker() {
 
               {/* Step 1 — Name selection */}
               {step === "name" && (
-                <div className="ds-card">
+                <div className="ds-card ds-card-overflow">
                   <div className="ds-card-header">
                     <span className="ds-card-title">Who ate?</span>
                   </div>
@@ -361,7 +410,7 @@ export default function HotdogTracker() {
                     <span className="ds-card-title">Who ate?</span>
                   </div>
                   <div className="ds-card-body">
-                    {/* Name — tappable to go back */}
+                    {/* Selected name — tap to go back */}
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       <span className="ds-field-label">Name</span>
                       <div
@@ -447,7 +496,7 @@ export default function HotdogTracker() {
                     size="medium"
                     label={submitting ? "Logging…" : "Log it!"}
                     loading={submitting}
-                    disabled={submitting || !videoFile || videoState === "uploading"}
+                    disabled={submitting || !videoFile}
                     onClick={handleSubmit}
                     style={{ width: "100%" }}
                   />
