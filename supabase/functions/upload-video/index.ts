@@ -1,9 +1,8 @@
 // supabase/functions/upload-video/index.ts
 //
-// Receives a raw video file from the browser, writes it to Supabase Storage
-// using the service key (server-side), then triggers GIF conversion.
-// This bypasses the iOS Safari issue where Authorization headers are stripped
-// from cross-origin XHR requests.
+// Receives raw video bytes + metadata via query params.
+// Raw binary body avoids multipart CORS preflight entirely.
+// verify_jwt must be disabled on this function (--no-verify-jwt).
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -11,7 +10,6 @@ const TRIGGER_SECRET_KEY = Deno.env.get("TRIGGER_SECRET_KEY")!;
 const TRIGGER_PROJECT_REF = Deno.env.get("TRIGGER_PROJECT_REF")!;
 
 const CORS_HEADERS = {
-  // Allow all origins so iOS Safari CORS preflight never blocks us
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -19,32 +17,36 @@ const CORS_HEADERS = {
 };
 
 Deno.serve(async (req) => {
-  // Handle preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: CORS_HEADERS, status: 204 });
   }
 
   try {
-    // Expect multipart/form-data with:
-    //   file  — the video file
-    //   id    — the entry ID (used as the storage filename)
-    const form = await req.formData();
-    const file   = form.get("file") as File | null;
-    const id     = form.get("id") as string | null;
-    // apikey passed in form body to avoid iOS Safari header stripping
-    const apikey = form.get("apikey") as string | null;
+    // Read id and ext from query params
+    const url = new URL(req.url);
+    const id  = url.searchParams.get("id");
+    const ext = url.searchParams.get("ext") || "mp4";
 
-    if (!file || !id) {
+    if (!id) {
       return new Response(
-        JSON.stringify({ error: "Missing file or id" }),
+        JSON.stringify({ error: "Missing id query param" }),
         { headers: CORS_HEADERS, status: 400 }
       );
     }
 
-    const ext  = file.name.split(".").pop() || "mp4";
-    const path = `${id}.${ext}`;
+    const path        = `${id}.${ext}`;
+    const contentType = req.headers.get("content-type") || "video/mp4";
 
-    // Upload to Supabase Storage using the service key — no browser auth needed
+    // Read raw binary body
+    const body = await req.arrayBuffer();
+    if (!body || body.byteLength === 0) {
+      return new Response(
+        JSON.stringify({ error: "Empty body" }),
+        { headers: CORS_HEADERS, status: 400 }
+      );
+    }
+
+    // Upload to Supabase Storage using service key
     const uploadRes = await fetch(
       `${SUPABASE_URL}/storage/v1/object/videos/${path}`,
       {
@@ -52,10 +54,10 @@ Deno.serve(async (req) => {
         headers: {
           "apikey": SUPABASE_SERVICE_KEY,
           "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`,
-          "Content-Type": file.type || "video/mp4",
+          "Content-Type": contentType,
           "x-upsert": "true",
         },
-        body: await file.arrayBuffer(),
+        body,
       }
     );
 

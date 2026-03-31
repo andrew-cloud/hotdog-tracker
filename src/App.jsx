@@ -79,13 +79,10 @@ const sb = {
 const UPLOAD_URL = `${SUPABASE_URL}/functions/v1/upload-video`;
 
 function uploadVideoViaFunction(id, file, onProgress) {
-  return new Promise((resolve, reject) => {
-    const form = new FormData();
-    form.append("file", file, file.name);
-    form.append("id", id);
-    // Pass key in the form body — avoids iOS Safari stripping auth headers
-    form.append("apikey", SUPABASE_ANON_KEY);
+  const ext = file.name.split(".").pop() || "mp4";
+  const path = `${id}.${ext}`;
 
+  return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 
     xhr.upload.addEventListener("progress", (e) => {
@@ -96,12 +93,8 @@ function uploadVideoViaFunction(id, file, onProgress) {
 
     xhr.addEventListener("load", () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const data = JSON.parse(xhr.responseText);
-          resolve(data);
-        } catch {
-          resolve({ videoPath: `${id}.${file.name.split(".").pop() || "mp4"}` });
-        }
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch { resolve({ videoPath: path }); }
       } else {
         reject(new Error(`Upload failed: ${xhr.status} — ${xhr.responseText}`));
       }
@@ -110,9 +103,12 @@ function uploadVideoViaFunction(id, file, onProgress) {
     xhr.addEventListener("error", () => reject(new Error("Network error during upload")));
     xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
 
-    // No auth headers — function has verify_jwt disabled, key is in form body
-    xhr.open("POST", UPLOAD_URL);
-    xhr.send(form);
+    // Send raw binary — avoids multipart CORS preflight
+    // Metadata goes in query params so no custom headers needed
+    const url = `${UPLOAD_URL}?id=${encodeURIComponent(id)}&ext=${encodeURIComponent(ext)}`;
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
+    xhr.send(file);
   });
 }
 
