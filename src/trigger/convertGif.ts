@@ -145,6 +145,19 @@ export const convertVideoToGif = task({
       logger.log("Updating entry...", { gifUrl });
       await updateEntryGifUrl(entryId, gifUrl);
 
+      // ── 5. Delete the original video — no longer needed ─────────────────
+      logger.log("Deleting source video...", { videoPath });
+      const deleteRes = await fetch(
+        `${SUPABASE_URL}/storage/v1/object/videos/${videoPath}`,
+        { method: "DELETE", headers: sbHeaders }
+      );
+      if (!deleteRes.ok) {
+        // Non-fatal — log but don't throw. GIF is already saved.
+        logger.warn("Video delete failed (non-fatal)", { status: deleteRes.status });
+      } else {
+        logger.log("Source video deleted");
+      }
+
       return { success: true, gifUrl, gifSizeMB: (gifBytes / 1024 / 1024).toFixed(1) };
 
     } finally {
