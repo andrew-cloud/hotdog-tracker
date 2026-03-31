@@ -84,7 +84,7 @@ function uploadVideoTus(id, file, onProgress) {
       endpoint: `${SUPABASE_URL}/storage/v1/upload/resumable`,
       retryDelays: [0, 3000, 5000, 10000, 20000],
       headers: {
-        authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         apikey: SUPABASE_ANON_KEY,
       },
       // Supabase does NOT support the creation-with-upload TUS extension
