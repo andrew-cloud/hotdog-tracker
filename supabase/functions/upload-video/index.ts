@@ -11,8 +11,9 @@ const TRIGGER_SECRET_KEY = Deno.env.get("TRIGGER_SECRET_KEY")!;
 const TRIGGER_PROJECT_REF = Deno.env.get("TRIGGER_PROJECT_REF")!;
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://andrew-cloud.github.io",
-  "Access-Control-Allow-Headers": "content-type, apikey, authorization",
+  // Allow all origins so iOS Safari CORS preflight never blocks us
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Content-Type": "application/json",
 };
@@ -28,8 +29,10 @@ Deno.serve(async (req) => {
     //   file  — the video file
     //   id    — the entry ID (used as the storage filename)
     const form = await req.formData();
-    const file = form.get("file") as File | null;
-    const id   = form.get("id") as string | null;
+    const file   = form.get("file") as File | null;
+    const id     = form.get("id") as string | null;
+    // apikey passed in form body to avoid iOS Safari header stripping
+    const apikey = form.get("apikey") as string | null;
 
     if (!file || !id) {
       return new Response(

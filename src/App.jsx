@@ -7,7 +7,6 @@ import { Button, Input, Stepper, UploadField, GifTile, Toast, Divider, TabBar, S
 const SUPABASE_URL = "https://lrjydzmsqkfmenrtoklv.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxyanlkem1zcWtmbWVucnRva2x2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTE5NjcsImV4cCI6MjA5MDAyNzk2N30.CzW0n8xunV9gholcPDYq-V7yxdtH29ud9piUyhEwxoY";
 const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/trigger-gif`;
-const UPLOAD_URL = `${SUPABASE_URL}/functions/v1/upload-video`;
 
 const sb = {
   headers: {
@@ -71,33 +70,48 @@ const sb = {
   },
 };
 
-// ── XHR upload with real progress ────────────────────────────────────────────
-// Uses XMLHttpRequest for real upload progress events on all browsers.
-// Sends apikey as both a query param and Authorization header — Supabase
-// storage requires the Authorization header specifically, and the query
-// param ensures auth survives any CORS preflight header stripping.
+// ── Upload via Edge Function ──────────────────────────────────────────────────
+// Posts the video to our own Supabase Edge Function, which writes to storage
+// using the service key server-side. This bypasses iOS Safari stripping the
+// Authorization header from cross-origin XHR requests.
+// The edge function also triggers GIF conversion, so we get one round-trip.
+
+const UPLOAD_URL = `${SUPABASE_URL}/functions/v1/upload-video`;
 
 function uploadVideoViaFunction(id, file, onProgress) {
   return new Promise((resolve, reject) => {
     const form = new FormData();
     form.append("file", file, file.name);
     form.append("id", id);
+    // Pass key in the form body — avoids iOS Safari stripping auth headers
+    form.append("apikey", SUPABASE_ANON_KEY);
+
     const xhr = new XMLHttpRequest();
+
     xhr.upload.addEventListener("progress", (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      if (e.lengthComputable) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
     });
+
     xhr.addEventListener("load", () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        try { resolve(JSON.parse(xhr.responseText)); }
-        catch { resolve({ videoPath: `${id}.${file.name.split(".").pop() || "mp4"}` }); }
+        try {
+          const data = JSON.parse(xhr.responseText);
+          resolve(data);
+        } catch {
+          resolve({ videoPath: `${id}.${file.name.split(".").pop() || "mp4"}` });
+        }
       } else {
         reject(new Error(`Upload failed: ${xhr.status} — ${xhr.responseText}`));
       }
     });
+
     xhr.addEventListener("error", () => reject(new Error("Network error during upload")));
     xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
+
+    // No auth headers — function has verify_jwt disabled, key is in form body
     xhr.open("POST", UPLOAD_URL);
-    xhr.setRequestHeader("apikey", SUPABASE_ANON_KEY);
     xhr.send(form);
   });
 }
@@ -269,7 +283,7 @@ export default function HotdogTracker() {
       const id = generateId();
       showToast("Uploading video...");
 
-      // Chunked TUS upload — real byte-level progress 0→100
+      // Upload via edge function — handles storage write + GIF trigger server-side
       const result = await uploadVideoViaFunction(id, videoFile, (pct) => {
         setUploadProgress(pct);
         setVideoState("uploading");
@@ -288,10 +302,6 @@ export default function HotdogTracker() {
       };
       await sb.insertEntry(entry);
 
-      // GIF conversion already triggered by the upload edge function
-
-      // Kick off background GIF conversion via edge function
-      await sb.triggerGifConversion(id, video_path);
       setProcessingIds(prev => new Set([...prev, id]));
       setEntries(prev => [entry, ...prev]);
 
