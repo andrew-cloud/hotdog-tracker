@@ -279,7 +279,7 @@ export default function HotdogTracker() {
       const id = generateId();
       showToast("Uploading video...");
 
-      // Upload via edge function — handles storage write + GIF trigger server-side
+      // Upload via edge function — storage write only
       const result = await uploadVideoViaFunction(id, videoFile, (pct) => {
         setUploadProgress(pct);
         setVideoState("uploading");
@@ -297,6 +297,9 @@ export default function HotdogTracker() {
         video_path: result.videoPath,
       };
       await sb.insertEntry(entry);
+
+      // Trigger GIF conversion via existing trigger-gif edge function
+      await sb.triggerGifConversion(id, result.videoPath);
 
       setProcessingIds(prev => new Set([...prev, id]));
       setEntries(prev => [entry, ...prev]);
