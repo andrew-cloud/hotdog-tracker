@@ -226,6 +226,7 @@ export default function HotdogTracker() {
   // Log form state
   const [count, setCount] = useState(1);
   const [videoFile, setVideoFile] = useState(null);
+  const [videoFileSize, setVideoFileSize] = useState("");
   const [videoState, setVideoState] = useState("default");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -345,10 +346,12 @@ export default function HotdogTracker() {
 
   // ── Submit ────────────────────────────────────────────────────────────────
 
-  // File selected by user — mark as ready, upload happens on submit
+  // File selected by user — "selected" state, upload happens on submit
   const handleFileSelect = (file) => {
     setVideoFile(file);
-    setVideoState("filled");
+    setVideoState("selected");
+    const mb = (file.size / 1024 / 1024).toFixed(1);
+    setVideoFileSize(`${mb} MB`);
   };
 
   const handleSubmit = async () => {
@@ -413,6 +416,7 @@ export default function HotdogTracker() {
       // Reset form and navigate to standings
       setCount(1);
       setVideoFile(null);
+      setVideoFileSize("");
       setVideoState("default");
       setUploadProgress(0);
       setTab("standings");
@@ -576,6 +580,7 @@ export default function HotdogTracker() {
                         state={videoState}
                         progress={uploadProgress}
                         filename={videoFile?.name}
+                        filesize={videoFileSize}
                         onFile={handleFileSelect}
                         accept="video/*"
                         style={{ width: "100%" }}
