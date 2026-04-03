@@ -14,11 +14,11 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing params" }), { headers, status: 400 });
     }
 
-    const TRIGGER_SECRET_KEY  = Deno.env.get("TRIGGER_SECRET_KEY")!;
-    const TRIGGER_PROJECT_REF = Deno.env.get("TRIGGER_PROJECT_REF")!;
+    const TRIGGER_SECRET_KEY = Deno.env.get("TRIGGER_SECRET_KEY")!;
 
+    // Trigger.dev v3 REST API endpoint
     const res = await fetch(
-      `https://api.trigger.dev/api/v1/projects/${TRIGGER_PROJECT_REF}/tasks/convert-video-to-gif/trigger`,
+      `https://api.trigger.dev/api/v3/tasks/convert-video-to-gif/trigger`,
       {
         method: "POST",
         headers: {
@@ -29,10 +29,10 @@ Deno.serve(async (req) => {
       }
     );
 
-    // Read as text first so HTML error pages don't throw a SyntaxError
+    // Read as text first to safely handle HTML error pages
     const body = await res.text();
     let data: any;
-    try { data = JSON.parse(body); } catch { data = { raw: body }; }
+    try { data = JSON.parse(body); } catch { data = { raw: body.slice(0, 200) }; }
 
     if (!res.ok) {
       return new Response(JSON.stringify({ error: data }), { headers, status: 500 });
