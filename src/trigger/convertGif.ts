@@ -1,6 +1,5 @@
 import { task, logger } from "@trigger.dev/sdk";
 import ffmpeg from "fluent-ffmpeg";
-import ffmpegPath from "ffmpeg-static";
 import { createWriteStream, createReadStream } from "fs";
 import { unlink, stat } from "fs/promises";
 import { tmpdir } from "os";
@@ -8,7 +7,8 @@ import { join } from "path";
 import { pipeline } from "stream/promises";
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY!;
+// Trigger.dev secrets use SUPABASE_SERVICE_ROLE_KEY
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY!;
 
 const sbHeaders = {
   apikey: SUPABASE_SERVICE_KEY,
@@ -107,7 +107,6 @@ export const convertVideoToGif = task({
       // typically 20–80 MB depending on content complexity.
 
       logger.log("Converting to GIF (5x speed)...");
-      ffmpeg.setFfmpegPath(ffmpegPath as string);
 
       await new Promise<void>((resolve, reject) => {
         ffmpeg(tmpVideo)
