@@ -16,9 +16,9 @@ Deno.serve(async (req) => {
 
     const TRIGGER_SECRET_KEY = Deno.env.get("TRIGGER_SECRET_KEY")!;
 
-    // Trigger.dev v3 REST API endpoint
+    // Trigger.dev v3 correct REST API endpoint
     const res = await fetch(
-      `https://api.trigger.dev/api/v3/tasks/convert-video-to-gif/trigger`,
+      `https://api.trigger.dev/api/v1/tasks/convert-video-to-gif/trigger`,
       {
         method: "POST",
         headers: {
