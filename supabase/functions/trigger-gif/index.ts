@@ -5,23 +5,41 @@ Deno.serve(async (req) => {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Content-Type": "application/json",
   };
+
   if (req.method === "OPTIONS") return new Response(null, { headers, status: 204 });
+
   try {
     const { entryId, videoPath } = await req.json();
-    if (!entryId || !videoPath) return new Response(JSON.stringify({ error: "Missing params" }), { headers, status: 400 });
-    const TRIGGER_SECRET_KEY = Deno.env.get("TRIGGER_SECRET_KEY")!;
+    if (!entryId || !videoPath) {
+      return new Response(JSON.stringify({ error: "Missing params" }), { headers, status: 400 });
+    }
+
+    const TRIGGER_SECRET_KEY  = Deno.env.get("TRIGGER_SECRET_KEY")!;
     const TRIGGER_PROJECT_REF = Deno.env.get("TRIGGER_PROJECT_REF")!;
+
     const res = await fetch(
       `https://api.trigger.dev/api/v1/projects/${TRIGGER_PROJECT_REF}/tasks/convert-video-to-gif/trigger`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${TRIGGER_SECRET_KEY}` },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${TRIGGER_SECRET_KEY}`,
+        },
         body: JSON.stringify({ payload: { entryId, videoPath } }),
       }
     );
-    const data = await res.json();
-    if (!res.ok) return new Response(JSON.stringify({ error: data }), { headers, status: 500 });
+
+    // Read as text first so HTML error pages don't throw a SyntaxError
+    const body = await res.text();
+    let data: any;
+    try { data = JSON.parse(body); } catch { data = { raw: body }; }
+
+    if (!res.ok) {
+      return new Response(JSON.stringify({ error: data }), { headers, status: 500 });
+    }
+
     return new Response(JSON.stringify({ success: true, runId: data.id }), { headers, status: 200 });
+
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), { headers, status: 500 });
   }

@@ -297,8 +297,12 @@ export default function HotdogTracker() {
       };
       await sb.insertEntry(entry);
 
-      // Trigger GIF conversion
-      await sb.triggerGifConversion(id, videoPath);
+      // Trigger GIF conversion — non-fatal, conversion happens in background
+      try {
+        await sb.triggerGifConversion(id, videoPath);
+      } catch (triggerErr) {
+        console.warn("GIF trigger failed (non-fatal):", triggerErr.message);
+      }
 
       setProcessingIds(prev => new Set([...prev, id]));
       setEntries(prev => [entry, ...prev]);
