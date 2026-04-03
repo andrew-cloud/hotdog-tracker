@@ -105,9 +105,8 @@ export default function GifTile({
         alignItems:     "center",
         justifyContent: "center",
         flexShrink:     0,
-        position:       "relative",
         width:          "100%",
-        height:         "180px",
+        minHeight:      isLoading ? "180px" : undefined,
         background:     "var(--surface\\/bg-tertiary, #1e1e28)",
         overflow:       "hidden",
       }}>
@@ -116,11 +115,9 @@ export default function GifTile({
             src={gifUrl}
             alt="Hotdog submission"
             style={{
-              position:  "absolute",
-              inset:     0,
+              display:   "block",
               width:     "100%",
-              height:    "100%",
-              objectFit: "cover",
+              height:    "auto",
             }}
           />
         )}
