@@ -74,26 +74,19 @@ const sb = {
   },
 };
 
-// ── Signed URL upload ─────────────────────────────────────────────────────────
-// 1. Get a pre-signed upload URL from our edge function (no file involved, tiny request)
-// 2. Upload the file directly to Supabase Storage using the signed URL
-//    — no Authorization header needed, auth is baked into the URL
-// This avoids iOS Safari stripping auth headers from cross-origin XHR requests.
+// ── Upload via Edge Function ──────────────────────────────────────────────────
+// Sends raw binary with Content-Type: text/plain — a CORS "simple" request
+// that doesn't trigger a preflight. iOS Safari proven to reach this endpoint.
+// The real mime type is passed as a query param for the function to use.
 
-const CREATE_UPLOAD_URL = `${SUPABASE_URL}/functions/v1/create-upload-url`;
+const UPLOAD_URL = `${SUPABASE_URL}/functions/v1/upload-video`;
 
-async function uploadVideoSigned(id, file, onProgress) {
+async function uploadVideoViaFunction(id, file, onProgress) {
   const ext = file.name.split(".").pop() || "mp4";
+  const path = `${id}.${ext}`;
+  const mime = encodeURIComponent(file.type || "video/mp4");
+  const url  = `${UPLOAD_URL}?id=${encodeURIComponent(id)}&ext=${encodeURIComponent(ext)}&mime=${mime}`;
 
-  // Step 1 — get signed URL (tiny request, no file)
-  const res = await fetch(
-    `${CREATE_UPLOAD_URL}?id=${encodeURIComponent(id)}&ext=${encodeURIComponent(ext)}`
-  );
-  if (!res.ok) throw new Error(`Failed to get upload URL: ${await res.text()}`);
-  const { signedURL, path } = await res.json();
-  if (!signedURL) throw new Error("No signed URL returned");
-
-  // Step 2 — upload directly to storage using signed URL (no auth headers needed)
   await new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 
@@ -109,8 +102,9 @@ async function uploadVideoSigned(id, file, onProgress) {
     xhr.addEventListener("error", () => reject(new Error("Network error during upload")));
     xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
 
-    xhr.open("PUT", `${SUPABASE_URL}${signedURL}`);
-    xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
+    // text/plain = CORS simple request = no preflight = no gateway block
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Content-Type", "text/plain");
     xhr.send(file);
   });
 
@@ -284,8 +278,8 @@ export default function HotdogTracker() {
       const id = generateId();
       showToast("Uploading video...");
 
-      // Upload via signed URL — goes directly to Supabase Storage, no auth headers needed
-      const videoPath = await uploadVideoSigned(id, videoFile, (pct) => {
+      // Upload via edge function with text/plain — no CORS preflight, reaches function on iOS Safari
+      const videoPath = await uploadVideoViaFunction(id, videoFile, (pct) => {
         setUploadProgress(pct);
         setVideoState("uploading");
       });
