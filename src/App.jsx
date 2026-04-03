@@ -109,7 +109,7 @@ async function uploadVideoSigned(id, file, onProgress) {
     xhr.addEventListener("error", () => reject(new Error("Network error during upload")));
     xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
 
-    xhr.open("PUT", `${SUPABASE_URL}${signedURL}`);
+    xhr.open("PUT", signedURL);
     xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
     xhr.send(file);
   });

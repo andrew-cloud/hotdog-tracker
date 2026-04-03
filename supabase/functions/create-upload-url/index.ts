@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
 
     // Create a signed upload URL using the service key
     const res = await fetch(
-      `${SUPABASE_URL}/storage/v1/object/sign/upload/videos/${path}`,
+      `${SUPABASE_URL}/storage/v1/object/upload/sign/videos/${path}`,
       {
         method: "POST",
         headers: {
@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
           "Authorization": `Bearer ${SERVICE_KEY}`,
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({ expiresIn: 3600 }),
       }
     );
 
