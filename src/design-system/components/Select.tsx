@@ -83,9 +83,9 @@ export default function Select({
       {/* Label */}
       <p style={{
         fontFamily: "Inter, sans-serif",
-        fontSize:   "12px",
+        fontSize:   "16px",
         fontWeight: 600,
-        lineHeight: "18px",
+        lineHeight: "22px",
         color:      "var(--text\\/secondary, #9e9bb4)",
         margin:     0,
       }}>
@@ -110,7 +110,8 @@ export default function Select({
             borderRadius:     "var(--radius\\/md, 6px)",
             color:            VALUE_COLOR[stateKey],
             fontFamily:       "Inter, sans-serif",
-            fontSize:         "14px",
+            // iOS Safari zooms on inputs < 16px — 16px prevents zoom
+            fontSize:         "16px",
             fontWeight:       400,
             lineHeight:       "20px",
             // Hide the browser's native arrow — we render our own
@@ -157,9 +158,9 @@ export default function Select({
       {isError && (
         <p style={{
           fontFamily: "Inter, sans-serif",
-          fontSize:   "11px",
+          fontSize:   "16px",
           fontWeight: 400,
-          lineHeight: "16px",
+          lineHeight: "22px",
           color:      "var(--semantic\\/danger, #e85c5c)",
           margin:     0,
         }}>

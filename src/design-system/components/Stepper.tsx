@@ -133,9 +133,9 @@ export default function Stepper({
       {showLabel && label && (
         <span style={{
           fontFamily: "Inter, sans-serif",
-          fontSize:   "12px",
+          fontSize:   "16px",
           fontWeight: 600,
-          lineHeight: "18px",
+          lineHeight: "22px",
           color:      "var(--text\\/secondary, #6b6882)",
           whiteSpace: "nowrap",
           userSelect: "none",

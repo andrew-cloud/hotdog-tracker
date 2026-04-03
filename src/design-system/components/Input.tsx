@@ -126,9 +126,9 @@ export default function Input({
 
   const labelStyle: React.CSSProperties = {
     fontFamily:  "Inter, sans-serif",
-    fontSize:    "12px",
+    fontSize:    "16px",
     fontWeight:  600,
-    lineHeight:  "18px",
+    lineHeight:  "22px",
     color:       "var(--text\\/secondary, #9e9bb4)",
     width:       "100%",
     flexShrink:  0,
@@ -138,10 +138,10 @@ export default function Input({
   const inputStyle: React.CSSProperties = {
     flex:          "1 0 0",
     fontFamily:    "Inter, sans-serif",
-    fontSize:      "14px",
+    fontSize:      "16px",
     fontWeight:    400,
-    lineHeight:    "20px",
-    height:        "20px",
+    lineHeight:    "22px",
+    height:        "22px",
     color:         VALUE_COLOR[state],
     background:    "transparent",
     border:        "none",
@@ -157,9 +157,9 @@ export default function Input({
 
   const hintStyle: React.CSSProperties = {
     fontFamily: "Inter, sans-serif",
-    fontSize:   "11px",
+    fontSize:   "16px",
     fontWeight: 400,
-    lineHeight: "16px",
+    lineHeight: "22px",
     color:      HINT_COLOR[state],
     width:      "100%",
     flexShrink: 0,

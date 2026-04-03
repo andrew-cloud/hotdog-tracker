@@ -144,9 +144,9 @@ export function TabItem({
       <div style={getInnerStyle(variant, effectiveState)}>
         <span style={{
           fontFamily: "Inter, sans-serif",
-          fontSize:   "14px",
+          fontSize:   "16px",
           fontWeight: 500,
-          lineHeight: "20px",
+          lineHeight: "22px",
           color:      getLabelColor(variant, effectiveState),
           whiteSpace: "nowrap",
           flexShrink: 0,

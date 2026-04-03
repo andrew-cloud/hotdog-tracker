@@ -219,9 +219,9 @@ export default function UploadField({
 
         <span style={{
           fontFamily: "Inter, sans-serif",
-          fontSize:   "13px",
+          fontSize:   "16px",
           fontWeight: 600,
-          lineHeight: "18px",
+          lineHeight: "22px",
           color:      LABEL_COLOR[state],
           textAlign:  "center",
           whiteSpace: "nowrap",
@@ -231,9 +231,9 @@ export default function UploadField({
 
         <span style={{
           fontFamily: "Inter, sans-serif",
-          fontSize:   "11px",
+          fontSize:   "16px",
           fontWeight: 400,
-          lineHeight: "16px",
+          lineHeight: "22px",
           color:      SUBLABEL_COLOR[state],
           textAlign:  "center",
           whiteSpace: "nowrap",
