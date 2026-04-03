@@ -24,9 +24,10 @@ Deno.serve(async (req) => {
     if (!SUPABASE_URL) return err("Missing SUPABASE_URL");
     if (!SERVICE_KEY)  return err("Missing SUPABASE_SERVICE_ROLE_KEY");
 
-    const u   = new URL(req.url);
-    const id  = u.searchParams.get("id");
-    const ext = u.searchParams.get("ext") || "mp4";
+    const u    = new URL(req.url);
+    const id   = u.searchParams.get("id");
+    const ext  = u.searchParams.get("ext") || "mp4";
+    const mime = u.searchParams.get("mime") || "video/mp4";
     if (!id) return err("Missing id query param", 400);
 
     const path        = `${id}.${ext}`;

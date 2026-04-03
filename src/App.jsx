@@ -103,11 +103,12 @@ function uploadVideoViaFunction(id, file, onProgress) {
     xhr.addEventListener("error", () => reject(new Error("Network error during upload")));
     xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
 
-    // Send raw binary — avoids multipart CORS preflight
-    // Metadata goes in query params so no custom headers needed
-    const url = `${UPLOAD_URL}?id=${encodeURIComponent(id)}&ext=${encodeURIComponent(ext)}`;
+    // text/plain is a CORS "simple" content type — no preflight triggered.
+    // Real mime type is passed as query param for the edge function to use.
+    const mime = encodeURIComponent(file.type || "video/mp4");
+    const url = `${UPLOAD_URL}?id=${encodeURIComponent(id)}&ext=${encodeURIComponent(ext)}&mime=${mime}`;
     xhr.open("POST", url);
-    xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
+    xhr.setRequestHeader("Content-Type", "text/plain");
     xhr.send(file);
   });
 }
