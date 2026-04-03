@@ -212,7 +212,7 @@ const NEW_USER_SENTINEL = "__new__";
 
 export default function HotdogTracker() {
   const [tab, setTab] = useState("log");    // "log" | "standings" | "gallery"
-  const [step, setStep] = useState("name"); // "name" | "pin" | "entry"
+  const [step, setStep] = useState("auth"); // "auth" | "entry"
 
   // Auth state
   const [selectedName, setSelectedName] = useState("");
@@ -285,28 +285,31 @@ export default function HotdogTracker() {
     { value: NEW_USER_SENTINEL, label: "New contestant" },
   ];
 
-  const handleNameConfirm = async () => {
-    if (!activeName) return;
-    setConfirming(true);
-    try {
-      const existingUser = await sb.getUser(activeName);
-
-      // If they picked "New contestant" but the name is already taken, block it
-      if (selectedName === NEW_USER_SENTINEL && existingUser) {
-        setLoginError(`"${activeName}" is already taken — select them from the list instead.`);
-        setConfirming(false);
-        return;
-      }
-
-      setIsNewUser(!existingUser);
-    } catch {
-      setIsNewUser(selectedName === NEW_USER_SENTINEL);
-    }
+  // When activeName changes, look up whether they're new or existing
+  // so we can show the right PIN label immediately
+  useEffect(() => {
+    if (!activeName) { setIsNewUser(null); return; }
+    let cancelled = false;
+    setIsNewUser(null); // reset while checking
     setLoginPin("");
     setLoginError("");
-    setConfirming(false);
-    setStep("pin");
-  };
+    (async () => {
+      try {
+        const existingUser = await sb.getUser(activeName);
+        if (cancelled) return;
+        // Block new contestant with a taken name
+        if (selectedName === NEW_USER_SENTINEL && existingUser) {
+          setLoginError(`"${activeName}" is already taken — select them from the list instead.`);
+          setIsNewUser(null);
+        } else {
+          setIsNewUser(!existingUser);
+        }
+      } catch {
+        if (!cancelled) setIsNewUser(selectedName === NEW_USER_SENTINEL);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [activeName]);
 
   const handlePinConfirm = async () => {
     if (!loginPin || loginPin.length < 4) {
@@ -316,17 +319,17 @@ export default function HotdogTracker() {
     setConfirming(true);
     setLoginError("");
     try {
-      const existingUser = await sb.getUser(activeName);
-      if (existingUser) {
-        if (existingUser.pin !== loginPin) {
+      if (isNewUser) {
+        await sb.createUser(activeName, loginPin);
+        setUsers(prev => [...prev, activeName].sort());
+      } else {
+        const existingUser = await sb.getUser(activeName);
+        if (!existingUser || existingUser.pin !== loginPin) {
           setLoginError("Wrong PIN — try again");
           setLoginPin("");
           setConfirming(false);
           return;
         }
-      } else {
-        await sb.createUser(activeName, loginPin);
-        setUsers(prev => [...prev, activeName].sort());
       }
       setAuthedName(activeName);
       setStep("entry");
@@ -464,13 +467,15 @@ export default function HotdogTracker() {
           {tab === "log" && (
             <>
 
-              {/* Step 1 — Name selection */}
-              {step === "name" && (
+              {/* Auth — single card, PIN appears after name is selected */}
+              {step === "auth" && (
                 <div className="ds-card ds-card-overflow">
                   <div className="ds-card-header">
                     <span className="ds-card-title">Who ate?</span>
                   </div>
                   <div className="ds-card-body">
+
+                    {/* Name select */}
                     <Select
                       label="Name"
                       options={nameOptions}
@@ -479,92 +484,69 @@ export default function HotdogTracker() {
                         setSelectedName(val);
                         setCustomName("");
                         setLoginError("");
+                        setLoginPin("");
+                        setIsNewUser(null);
                       }}
                       placeholder="— Choose —"
                     />
 
+                    {/* Custom name input — new contestant only */}
                     {selectedName === NEW_USER_SENTINEL && (
                       <div style={{ marginTop: 16 }}>
                         <Input
                           label="Your name"
                           placeholder="Enter your name"
                           value={customName}
-                          onChange={e => { setCustomName(e.target.value); setLoginError(""); }}
+                          onChange={e => { setCustomName(e.target.value); setLoginError(""); setLoginPin(""); setIsNewUser(null); }}
+                          state={loginError && !loginPin ? "error" : "default"}
+                          hint={loginError && !loginPin ? loginError : undefined}
+                          showHint={!!(loginError && !loginPin)}
+                          autoFocus
+                        />
+                      </div>
+                    )}
+
+                    {/* PIN field — appears once we know if user is new or existing */}
+                    {activeName && isNewUser !== null && (
+                      <div style={{ marginTop: 16 }}>
+                        <Input
+                          label={isNewUser ? "Create a 4-digit PIN" : "Enter your 4-digit PIN"}
+                          type="password"
+                          inputMode="numeric"
+                          maxLength={4}
+                          value={loginPin}
+                          onChange={e => {
+                            setLoginPin(e.target.value.replace(/\D/g, "").slice(0, 4));
+                            setLoginError("");
+                          }}
+                          onKeyDown={e => { if (e.key === "Enter" && loginPin.length === 4) handlePinConfirm(); }}
                           state={loginError ? "error" : "default"}
-                          hint={loginError}
+                          hint={loginError || undefined}
                           showHint={!!loginError}
                           autoFocus
                         />
                       </div>
                     )}
 
-                    <div style={{ marginTop: 24 }}>
-                      <Button
-                        buttonStyle="primary"
-                        size="medium"
-                        label={confirming ? "Checking…" : "Confirm"}
-                        loading={confirming}
-                        disabled={!activeName || confirming}
-                        onClick={handleNameConfirm}
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2 — PIN entry */}
-              {step === "pin" && (
-                <div className="ds-card">
-                  <div className="ds-card-header">
-                    <span className="ds-card-title">Who ate?</span>
-                  </div>
-                  <div className="ds-card-body">
-                    {/* Selected name — tap to go back */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      <span className="ds-field-label">Name</span>
-                      <div
-                        className="ds-name-field"
-                        onClick={() => { setStep("name"); setLoginPin(""); setLoginError(""); }}
-                      >
-                        <span style={{ fontFamily: "Inter, sans-serif", fontSize: 14, color: "var(--text\\/primary, #f0ede6)" }}>
-                          {activeName}
-                        </span>
-                        <span style={{ fontSize: 11, color: "var(--text\\/tertiary, #6b6882)" }}>▾</span>
+                    {/* Confirm — only shown when PIN field is visible */}
+                    {activeName && isNewUser !== null && (
+                      <div style={{ marginTop: 24 }}>
+                        <Button
+                          buttonStyle="primary"
+                          size="medium"
+                          label={confirming ? "Confirming…" : "Confirm"}
+                          loading={confirming}
+                          disabled={loginPin.length < 4 || confirming}
+                          onClick={handlePinConfirm}
+                          style={{ width: "100%" }}
+                        />
                       </div>
-                    </div>
+                    )}
 
-                    <div style={{ marginTop: 16 }}>
-                      <Input
-                        label={isNewUser ? "Create a four-digit PIN" : "Enter your four-digit PIN"}
-                        type="password"
-                        inputMode="numeric"
-                        maxLength={4}
-                        value={loginPin}
-                        onChange={e => {
-                          setLoginPin(e.target.value.replace(/\D/g, "").slice(0, 4));
-                          setLoginError("");
-                        }}
-                        state={loginError ? "error" : "default"}
-                        hint={loginError}
-                        autoFocus
-                      />
-                    </div>
-
-                    <div style={{ marginTop: 24 }}>
-                      <Button
-                        buttonStyle="primary"
-                        size="medium"
-                        label={confirming ? "Confirming…" : "Confirm"}
-                        loading={confirming}
-                        disabled={loginPin.length < 4 || confirming}
-                        onClick={handlePinConfirm}
-                        style={{ width: "100%" }}
-                      />
-                    </div>
                   </div>
                 </div>
               )}
+
 
               {/* Step 3 — Dog entry form */}
               {step === "entry" && (
