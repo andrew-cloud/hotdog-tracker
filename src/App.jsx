@@ -74,47 +74,47 @@ const sb = {
   },
 };
 
-// ── Upload via Edge Function ──────────────────────────────────────────────────
-// Posts the video to our own Supabase Edge Function, which writes to storage
-// using the service key server-side. This bypasses iOS Safari stripping the
-// Authorization header from cross-origin XHR requests.
-// The edge function also triggers GIF conversion, so we get one round-trip.
+// ── Signed URL upload ─────────────────────────────────────────────────────────
+// 1. Get a pre-signed upload URL from our edge function (no file involved, tiny request)
+// 2. Upload the file directly to Supabase Storage using the signed URL
+//    — no Authorization header needed, auth is baked into the URL
+// This avoids iOS Safari stripping auth headers from cross-origin XHR requests.
 
-const UPLOAD_URL = `${SUPABASE_URL}/functions/v1/upload-video`;
+const CREATE_UPLOAD_URL = `${SUPABASE_URL}/functions/v1/create-upload-url`;
 
-function uploadVideoViaFunction(id, file, onProgress) {
+async function uploadVideoSigned(id, file, onProgress) {
   const ext = file.name.split(".").pop() || "mp4";
-  const path = `${id}.${ext}`;
 
-  return new Promise((resolve, reject) => {
+  // Step 1 — get signed URL (tiny request, no file)
+  const res = await fetch(
+    `${CREATE_UPLOAD_URL}?id=${encodeURIComponent(id)}&ext=${encodeURIComponent(ext)}`
+  );
+  if (!res.ok) throw new Error(`Failed to get upload URL: ${await res.text()}`);
+  const { signedURL, path } = await res.json();
+  if (!signedURL) throw new Error("No signed URL returned");
+
+  // Step 2 — upload directly to storage using signed URL (no auth headers needed)
+  await new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 
     xhr.upload.addEventListener("progress", (e) => {
-      if (e.lengthComputable) {
-        onProgress(Math.round((e.loaded / e.total) * 100));
-      }
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
     });
 
     xhr.addEventListener("load", () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try { resolve(JSON.parse(xhr.responseText)); }
-        catch { resolve({ videoPath: path }); }
-      } else {
-        reject(new Error(`Upload failed: ${xhr.status} — ${xhr.responseText}`));
-      }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(path);
+      else reject(new Error(`Upload failed: ${xhr.status} — ${xhr.responseText}`));
     });
 
     xhr.addEventListener("error", () => reject(new Error("Network error during upload")));
     xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
 
-    // text/plain is a CORS "simple" content type — no preflight triggered.
-    // Real mime type is passed as query param for the edge function to use.
-    const mime = encodeURIComponent(file.type || "video/mp4");
-    const url = `${UPLOAD_URL}?id=${encodeURIComponent(id)}&ext=${encodeURIComponent(ext)}&mime=${mime}`;
-    xhr.open("POST", url);
-    xhr.setRequestHeader("Content-Type", "text/plain");
+    xhr.open("PUT", `${SUPABASE_URL}${signedURL}`);
+    xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
     xhr.send(file);
   });
+
+  return path;
 }
 
 function generateId() {
@@ -284,8 +284,8 @@ export default function HotdogTracker() {
       const id = generateId();
       showToast("Uploading video...");
 
-      // Upload via edge function — storage write only
-      const result = await uploadVideoViaFunction(id, videoFile, (pct) => {
+      // Upload via signed URL — goes directly to Supabase Storage, no auth headers needed
+      const videoPath = await uploadVideoSigned(id, videoFile, (pct) => {
         setUploadProgress(pct);
         setVideoState("uploading");
       });
@@ -299,12 +299,12 @@ export default function HotdogTracker() {
         count: Number(count),
         timestamp: Date.now(),
         gif_url: null,
-        video_path: result.videoPath,
+        video_path: videoPath,
       };
       await sb.insertEntry(entry);
 
-      // Trigger GIF conversion via existing trigger-gif edge function
-      await sb.triggerGifConversion(id, result.videoPath);
+      // Trigger GIF conversion
+      await sb.triggerGifConversion(id, videoPath);
 
       setProcessingIds(prev => new Set([...prev, id]));
       setEntries(prev => [entry, ...prev]);
