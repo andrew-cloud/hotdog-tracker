@@ -35,7 +35,11 @@ const sb = {
   async triggerGifConversion(entryId, videoPath) {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      },
       body: JSON.stringify({ entryId, videoPath }),
     });
     if (!res.ok) throw new Error(await res.text());
