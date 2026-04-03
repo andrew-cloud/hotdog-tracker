@@ -71,6 +71,9 @@ export const convertVideoToGif = task({
   // 15 minutes — enough headroom for a 10-minute video at 5x speed
   maxDuration: 900,
 
+  // Medium machine (2GB RAM) — GIF conversion is memory-intensive
+  machine: "medium-1x",
+
   run: async (payload: { entryId: string; videoPath: string }) => {
     const { entryId, videoPath } = payload;
 
@@ -106,7 +109,7 @@ export const convertVideoToGif = task({
       // Result: a 10-minute video becomes a ~2-minute GIF at 5x,
       // typically 20–80 MB depending on content complexity.
 
-      logger.log("Converting to GIF (5x speed)...");
+      logger.log("Converting to GIF (2x speed, 8fps)...");
 
       await new Promise<void>((resolve, reject) => {
         ffmpeg(tmpVideo)
@@ -115,12 +118,12 @@ export const convertVideoToGif = task({
           .outputOptions([
             "-vf",
             [
-              "setpts=0.2*PTS",
-              "scale=480:-1:flags=lanczos",
-              "fps=12",
+              "setpts=0.5*PTS",          // 2x speed (as per requirements)
+              "scale=360:-1:flags=lanczos", // 360px wide — lower memory than 480
+              "fps=8",                   // 8fps as per requirements
               "split[s0][s1]",
-              "[s0]palettegen=max_colors=128:stats_mode=diff[p]",
-              "[s1][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle",
+              "[s0]palettegen=max_colors=64:stats_mode=diff[p]", // 64 colors — less memory
+              "[s1][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle",
             ].join(","),
             "-loop", "0",
           ])
