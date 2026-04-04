@@ -87,7 +87,7 @@ const sb = {
 // The tunnel prints a URL like https://xxxx-xxxx.trycloudflare.com
 // Paste that URL below.
 
-const MAC_MINI_URL = window.__UPLOAD_SERVER_URL__ || "https://tape-daniel-vid-junction.trycloudflare.com";
+const MAC_MINI_URL = window.__UPLOAD_SERVER_URL__ || "https://pos-developer-cached-matter.trycloudflare.com";
 
 async function uploadVideoViaMacMini(id, file, onProgress) {
   const ext  = file.name.split(".").pop() || "mp4";
