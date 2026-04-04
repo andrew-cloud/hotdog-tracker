@@ -228,33 +228,42 @@ export default function HotdogTracker() {
     { value: NEW_USER_SENTINEL, label: "New contestant" },
   ];
 
-  // When activeName changes, look up whether they're new or existing
-  // so we can show the right PIN label immediately
+  // When an existing user is selected from the dropdown, look them up once
+  // to determine new/existing. For new contestants we know isNewUser = true
+  // immediately — no per-keystroke lookup needed.
   useEffect(() => {
-    if (!activeName) { setIsNewUser(null); return; }
+    if (selectedName === NEW_USER_SENTINEL) {
+      // New contestant — show both fields immediately, no lookup
+      setIsNewUser(true);
+      setLoginPin("");
+      setLoginError("");
+      return;
+    }
+    if (!selectedName) {
+      setIsNewUser(null);
+      return;
+    }
+    // Existing user selected from dropdown — look up once
     let cancelled = false;
-    setIsNewUser(null); // reset while checking
+    setIsNewUser(null);
     setLoginPin("");
     setLoginError("");
     (async () => {
       try {
-        const existingUser = await sb.getUser(activeName);
-        if (cancelled) return;
-        // Block new contestant with a taken name
-        if (selectedName === NEW_USER_SENTINEL && existingUser) {
-          setLoginError(`"${activeName}" is already taken — select them from the list instead.`);
-          setIsNewUser(null);
-        } else {
-          setIsNewUser(!existingUser);
-        }
+        const existingUser = await sb.getUser(selectedName);
+        if (!cancelled) setIsNewUser(!existingUser);
       } catch {
-        if (!cancelled) setIsNewUser(selectedName === NEW_USER_SENTINEL);
+        if (!cancelled) setIsNewUser(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [activeName]);
+  }, [selectedName]); // only runs when dropdown selection changes, not on every keystroke
 
   const handlePinConfirm = async () => {
+    if (!activeName) {
+      setLoginError("Please enter your name");
+      return;
+    }
     if (!loginPin || loginPin.length < 4) {
       setLoginError("Enter your 4-digit PIN");
       return;
@@ -263,6 +272,13 @@ export default function HotdogTracker() {
     setLoginError("");
     try {
       if (isNewUser) {
+        // Check for duplicate name at confirm time
+        const existingUser = await sb.getUser(activeName);
+        if (existingUser) {
+          setLoginError(`"${activeName}" is already taken — select them from the list instead.`);
+          setConfirming(false);
+          return;
+        }
         await sb.createUser(activeName, loginPin);
         setUsers(prev => [...prev, activeName].sort());
       } else {
@@ -427,7 +443,7 @@ export default function HotdogTracker() {
                           label="Your name"
                           placeholder="Enter your name"
                           value={customName}
-                          onChange={e => { setCustomName(e.target.value); setLoginError(""); setLoginPin(""); setIsNewUser(null); }}
+                          onChange={e => { setCustomName(e.target.value); setLoginError(""); }}
                           state={loginError && !loginPin ? "error" : "default"}
                           hint={loginError && !loginPin ? loginError : undefined}
                           showHint={!!(loginError && !loginPin)}
@@ -436,8 +452,9 @@ export default function HotdogTracker() {
                       </div>
                     )}
 
-                    {/* PIN field — appears once we know if user is new or existing */}
-                    {activeName && isNewUser !== null && (
+                    {/* PIN field — for existing users: appears after name selected + lookup done
+                                   for new contestants: appears immediately on selection */}
+                    {isNewUser !== null && (selectedName !== NEW_USER_SENTINEL || true) && (
                       <div style={{ marginTop: 16 }}>
                         <Input
                           label={isNewUser ? "Create a 4-digit PIN" : "Enter your 4-digit PIN"}
@@ -450,23 +467,23 @@ export default function HotdogTracker() {
                             setLoginError("");
                           }}
                           onKeyDown={e => { if (e.key === "Enter" && loginPin.length === 4) handlePinConfirm(); }}
-                          state={loginError ? "error" : "default"}
-                          hint={loginError || undefined}
-                          showHint={!!loginError}
+                          state={loginError && loginPin.length === 0 ? "default" : loginError ? "error" : "default"}
+                          hint={loginError && loginPin.length > 0 ? loginError : undefined}
+                          showHint={!!(loginError && loginPin.length > 0)}
                           autoFocus={!isNewUser}
                         />
                       </div>
                     )}
 
-                    {/* Confirm — only shown when PIN field is visible */}
-                    {activeName && isNewUser !== null && (
+                    {/* Confirm — shown when PIN field is visible */}
+                    {isNewUser !== null && (
                       <div style={{ marginTop: 24 }}>
                         <Button
                           buttonStyle="primary"
                           size="medium"
                           label={confirming ? "Confirming…" : "Confirm"}
                           loading={confirming}
-                          disabled={loginPin.length < 4 || confirming}
+                          disabled={!activeName || loginPin.length < 4 || confirming}
                           onClick={handlePinConfirm}
                           style={{ width: "100%" }}
                         />
