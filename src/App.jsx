@@ -144,7 +144,16 @@ const NEW_USER_SENTINEL = "__new__";
 // ── App ───────────────────────────────────────────────────────────────────────
 
 export default function HotdogTracker() {
-  const [tab, setTab] = useState("log");    // "log" | "standings" | "gallery"
+  const [tab, setTab] = useState(() => {
+    // Restore last active tab on refresh, default to "log"
+    return localStorage.getItem("hds-tab") || "log";
+  });
+
+  // Persist tab changes
+  const handleTabChange = (val) => {
+    setTab(val);
+    localStorage.setItem("hds-tab", val);
+  };
   const [step, setStep] = useState("auth"); // "auth" | "entry"
 
   // Auth state
@@ -335,7 +344,7 @@ export default function HotdogTracker() {
       setVideoFileSize("");
       setVideoState("default");
       setUploadProgress(0);
-      setTab("gallery");
+      handleTabChange("gallery");
       showToast("Logged! 🌭 GIF converting in the background...");
     } catch (e) {
       console.error("Submit error:", e);
@@ -378,7 +387,7 @@ export default function HotdogTracker() {
             { value: "gallery",   label: "Gallery"    },
           ]}
           value={tab}
-          onChange={val => setTab(val)}
+          onChange={val => handleTabChange(val)}
           style={{ width: "100%", flexShrink: 0 }}
         />
 
@@ -444,7 +453,7 @@ export default function HotdogTracker() {
                           state={loginError ? "error" : "default"}
                           hint={loginError || undefined}
                           showHint={!!loginError}
-                          autoFocus
+                          autoFocus={!isNewUser}
                         />
                       </div>
                     )}
