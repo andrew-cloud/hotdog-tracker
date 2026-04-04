@@ -411,15 +411,14 @@ export default function HotdogTracker() {
       setProcessingIds(prev => new Set([...prev, id]));
       setEntries(prev => [entry, ...prev]);
 
-      showToast("Logged! 🌭 GIF converting in the background...");
-
-      // Reset form and navigate to standings
+      // Navigate to gallery first, then show the toast there
       setCount(1);
       setVideoFile(null);
       setVideoFileSize("");
       setVideoState("default");
       setUploadProgress(0);
-      setTab("standings");
+      setTab("gallery");
+      showToast("Logged! 🌭 GIF converting in the background...");
     } catch (e) {
       console.error("Submit error:", e);
       showToast(e.message || "Something went wrong — please try again.", "error");
