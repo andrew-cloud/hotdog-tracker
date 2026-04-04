@@ -74,101 +74,29 @@ const sb = {
   },
 };
 
-// ── Client-side video compression ────────────────────────────────────────────
-// Uses FFmpeg.wasm (single-threaded, no SharedArrayBuffer needed) loaded from
-// CDN. Only compresses if file is over 40 MB — smaller files upload as-is.
+// ── Mac Mini upload server ────────────────────────────────────────────────────
+// Raw video is sent to the local server which compresses with native FFmpeg
+// (seconds, not minutes) and uploads to Supabase using the service key.
+// The server URL comes from a Cloudflare Tunnel — update this when the
+// tunnel URL changes.
+//
+// To start the server:
+//   cd hotdog-server && node server.js
+//   npx cloudflare tunnel --url http://localhost:3001
+//
+// The tunnel prints a URL like https://xxxx-xxxx.trycloudflare.com
+// Paste that URL below.
 
-const COMPRESS_THRESHOLD = 40 * 1024 * 1024; // 40 MB
+const MAC_MINI_URL = window.__UPLOAD_SERVER_URL__ || "https://your-tunnel-url.trycloudflare.com";
 
-let ffmpegInstance = null;
-
-async function loadFFmpeg(onProgress) {
-  if (ffmpegInstance) return ffmpegInstance;
-
-  // Dynamically load the FFmpeg.wasm single-threaded build from CDN
-  await new Promise((resolve, reject) => {
-    if (window.FFmpegWASM) return resolve();
-    const script = document.createElement("script");
-    script.src = "https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js";
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-
-  const { FFmpeg } = window.FFmpegWASM;
-  const ff = new FFmpeg();
-
-  if (onProgress) {
-    ff.on("progress", ({ progress }) => {
-      onProgress(Math.round(progress * 100));
-    });
-  }
-
-  await ff.load({
-    coreURL: "https://unpkg.com/@ffmpeg/core-st@0.12.6/dist/umd/ffmpeg-core.js",
-  });
-
-  ffmpegInstance = ff;
-  return ff;
-}
-
-async function compressVideoIfNeeded(file, onProgress) {
-  // Skip compression for small files
-  if (file.size <= COMPRESS_THRESHOLD) {
-    console.log(`File ${(file.size / 1024 / 1024).toFixed(1)} MB — skipping compression`);
-    return file;
-  }
-
-  console.log(`File ${(file.size / 1024 / 1024).toFixed(1)} MB — compressing...`);
-
-  const ff = await loadFFmpeg(onProgress);
-  const { fetchFile } = window.FFmpegWASM;
-
+async function uploadVideoViaMacMini(id, file, onProgress) {
   const ext  = file.name.split(".").pop() || "mp4";
-  const inName  = `input.${ext}`;
-  const outName = "output.mp4";
+  const path = `${id}.mp4`;
 
-  // Write file into FFmpeg virtual FS
-  await ff.writeFile(inName, await fetchFile(file));
+  return new Promise((resolve, reject) => {
+    const form = new FormData();
+    form.append("file", file, file.name);
 
-  // Compress: scale to max 720p width, CRF 28, fast preset, strip audio
-  await ff.exec([
-    "-i", inName,
-    "-vf", "scale='min(720,iw)':-2",
-    "-c:v", "libx264",
-    "-crf", "28",
-    "-preset", "fast",
-    "-an",               // strip audio — not needed for GIF conversion
-    "-movflags", "+faststart",
-    outName,
-  ]);
-
-  const data = await ff.readFile(outName);
-  await ff.deleteFile(inName);
-  await ff.deleteFile(outName);
-
-  const compressed = new File([data.buffer], `${file.name.replace(/\.[^.]+$/, "")}.mp4`, {
-    type: "video/mp4",
-  });
-
-  console.log(`Compressed: ${(compressed.size / 1024 / 1024).toFixed(1)} MB`);
-  return compressed;
-}
-
-
-// Sends raw binary with Content-Type: text/plain — a CORS "simple" request
-// that doesn't trigger a preflight. iOS Safari proven to reach this endpoint.
-// The real mime type is passed as a query param for the function to use.
-
-const UPLOAD_URL = `${SUPABASE_URL}/functions/v1/upload-video`;
-
-async function uploadVideoViaFunction(id, file, onProgress) {
-  const ext = file.name.split(".").pop() || "mp4";
-  const path = `${id}.${ext}`;
-  const mime = encodeURIComponent(file.type || "video/mp4");
-  const url  = `${UPLOAD_URL}?id=${encodeURIComponent(id)}&ext=${encodeURIComponent(ext)}&mime=${mime}`;
-
-  await new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 
     xhr.upload.addEventListener("progress", (e) => {
@@ -176,21 +104,26 @@ async function uploadVideoViaFunction(id, file, onProgress) {
     });
 
     xhr.addEventListener("load", () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve(path);
-      else reject(new Error(`Upload failed: ${xhr.status} — ${xhr.responseText}`));
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          resolve(data.videoPath || path);
+        } catch {
+          resolve(path);
+        }
+      } else {
+        reject(new Error(`Upload failed: ${xhr.status} — ${xhr.responseText}`));
+      }
     });
 
-    xhr.addEventListener("error", () => reject(new Error("Network error during upload")));
+    xhr.addEventListener("error", () => reject(new Error("Network error — is the Mac Mini server running?")));
     xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
 
-    // text/plain = CORS simple request = no preflight = no gateway block
-    xhr.open("POST", url);
-    xhr.setRequestHeader("Content-Type", "text/plain");
-    xhr.send(file);
+    xhr.open("POST", `${MAC_MINI_URL}/upload?id=${encodeURIComponent(id)}`);
+    xhr.send(form);
   });
-
-  return path;
 }
+
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -364,33 +297,17 @@ export default function HotdogTracker() {
     try {
       const id = generateId();
 
-      // ── Step 1: compress if over 40 MB ──────────────────────────────────
-      let fileToUpload = videoFile;
-      const needsCompression = videoFile.size > COMPRESS_THRESHOLD;
-
-      if (needsCompression) {
-        showToast("Compressing video...");
-        setVideoState("uploading");
-        setUploadProgress(0);
-        fileToUpload = await compressVideoIfNeeded(videoFile, (pct) => {
-          // Compression is 0–50%, upload is 50–100%
-          setUploadProgress(Math.round(pct * 0.5));
-        });
-        setUploadProgress(50);
-      }
-
-      // ── Step 2: upload ───────────────────────────────────────────────────
+      // ── Upload to Mac Mini server (compresses + uploads to Supabase) ─────
       showToast("Uploading video...");
       setVideoState("uploading");
 
-      const videoPath = await uploadVideoViaFunction(id, fileToUpload, (pct) => {
-        // If we compressed, upload progress maps 50–100%; otherwise 0–100%
-        setUploadProgress(needsCompression ? 50 + Math.round(pct * 0.5) : pct);
+      const videoPath = await uploadVideoViaMacMini(id, videoFile, (pct) => {
+        setUploadProgress(pct);
       });
       setUploadProgress(100);
       setVideoState("filled");
 
-      // ── Step 3: save entry ───────────────────────────────────────────────
+      // ── Save entry ───────────────────────────────────────────────────────
       const entry = {
         id,
         name: authedName,
@@ -401,7 +318,8 @@ export default function HotdogTracker() {
       };
       await sb.insertEntry(entry);
 
-      // ── Step 4: trigger GIF conversion ──────────────────────────────────
+      // ── Trigger GIF conversion (Mac Mini server already triggered this,
+      //    but trigger-gif is idempotent so calling it again is safe) ───────
       try {
         await sb.triggerGifConversion(id, videoPath);
       } catch (triggerErr) {
