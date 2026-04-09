@@ -35,6 +35,8 @@ Deno.serve(async (req) => {
 
     const body = await req.arrayBuffer();
     if (!body || body.byteLength === 0) return err("Empty body", 400);
+    const MAX_SIZE = 1 * 1024 * 1024 * 1024; // 1 GB
+    if (body.byteLength > MAX_SIZE) return err("File too large. Maximum size is 1 GB.", 413);
 
     const storageRes = await fetch(
       `${SUPABASE_URL}/storage/v1/object/videos/${path}`,

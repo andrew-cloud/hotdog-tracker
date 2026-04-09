@@ -306,6 +306,11 @@ export default function HotdogTracker() {
 
   // File selected by user — "selected" state, upload happens on submit
   const handleFileSelect = (file) => {
+    const MAX_SIZE = 1 * 1024 * 1024 * 1024; // 1 GB
+    if (file.size > MAX_SIZE) {
+      showToast("File is too large. Maximum size is 1 GB. 🚫", "error");
+      return;
+    }
     setVideoFile(file);
     setVideoState("selected");
     const mb = (file.size / 1024 / 1024).toFixed(1);

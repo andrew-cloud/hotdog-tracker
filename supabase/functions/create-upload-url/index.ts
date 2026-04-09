@@ -46,7 +46,17 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: `Sign failed: ${err}` }), { headers: CORS, status: 500 });
     }
 
-    const { signedURL } = await res.json();
+    const signData = await res.json();
+
+    // signedURL field name varies — try both known variants
+    const signedURL = signData.signedURL || signData.signedUrl || signData.url;
+
+    if (!signedURL) {
+      return new Response(
+        JSON.stringify({ error: "No signed URL in response", raw: signData }),
+        { headers: CORS, status: 500 }
+      );
+    }
 
     return new Response(
       JSON.stringify({ signedURL, path }),
