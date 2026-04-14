@@ -128,9 +128,9 @@ body {
 /* ── Standings ────────────────────────────────────────────────────────── */
 .ds-standings-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 4px 12px;
+  padding: 8px 12px;
 }
 
 .ds-standings-left {
