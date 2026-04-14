@@ -152,7 +152,7 @@ export default function UploadField({
     : state === "selected"  ? (filesize ? `${filesize} · Ready to upload` : "Ready to upload")
     : state === "filled"    ? (filesize ? `${filesize} · Uploaded` : "Uploaded")
     : state === "error"     ? errorMessage
-    : "MP4 or MOV · Max 100MB";
+    : "MP4 or MOV · Max 1 GB";
 
   // Height: auto when a filename is shown so long names can wrap
   const hasFilename = state === "selected" || state === "filled";

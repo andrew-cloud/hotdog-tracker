@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import "./App.css";
-import { Button, Input, Stepper, UploadField, GifTile, Toast, Divider, TabBar, Select } from "./design-system";
+import { Avatar, Button, Input, Stepper, Textarea, UploadField, GifTile, Toast, Divider, TabBar, Select } from "./design-system";
 
 // ── Supabase client (unchanged) ───────────────────────────────────────────────
 
@@ -52,15 +52,26 @@ const sb = {
     return rows[0] || null;
   },
   async getUsers() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=name_key,display_name&order=display_name.asc`, { headers: this.headers });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=name_key,display_name,avatar_url&order=display_name.asc`, { headers: this.headers });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
   async getUser(displayName) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?display_name=eq.${encodeURIComponent(displayName)}&select=*`, { headers: this.headers });
+    // Deliberately excludes pin — never fetch PINs to the client
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?display_name=eq.${encodeURIComponent(displayName)}&select=name_key,display_name`, { headers: this.headers });
     if (!res.ok) throw new Error(await res.text());
     const rows = await res.json();
     return rows[0] || null;
+  },
+  async verifyPin(displayName, pin) {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-pin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+      body: JSON.stringify({ displayName, pin }),
+    });
+    if (!res.ok) throw new Error("PIN verification failed");
+    const { valid } = await res.json();
+    return valid;
   },
   async createUser(displayName, pin) {
     const nameKey = displayName.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
@@ -167,6 +178,7 @@ export default function HotdogTracker() {
 
   // Log form state
   const [count, setCount] = useState(1);
+  const [notes, setNotes] = useState("");
   const [videoFile, setVideoFile] = useState(null);
   const [videoFileSize, setVideoFileSize] = useState("");
   const [videoState, setVideoState] = useState("default");
@@ -176,6 +188,7 @@ export default function HotdogTracker() {
   // Data
   const [entries, setEntries] = useState([]);
   const [users, setUsers] = useState([]);
+  const [avatarByName, setAvatarByName] = useState({});
   const [loadingData, setLoadingData] = useState(true);
   const [processingIds, setProcessingIds] = useState(new Set());
   const [toast, setToast] = useState(null);
@@ -188,6 +201,7 @@ export default function HotdogTracker() {
         const [entryData, userData] = await Promise.all([sb.getEntries(), sb.getUsers()]);
         setEntries(entryData);
         setUsers(userData.map(u => u.display_name));
+        setAvatarByName(Object.fromEntries(userData.map(u => [u.display_name, u.avatar_url ?? null])));
         const pending = new Set(entryData.filter(e => e.video_path && !e.gif_url).map(e => e.id));
         setProcessingIds(pending);
       } catch {
@@ -282,8 +296,8 @@ export default function HotdogTracker() {
         await sb.createUser(activeName, loginPin);
         setUsers(prev => [...prev, activeName].sort());
       } else {
-        const existingUser = await sb.getUser(activeName);
-        if (!existingUser || existingUser.pin !== loginPin) {
+        const valid = await sb.verifyPin(activeName, loginPin);
+        if (!valid) {
           setLoginError("Wrong PIN — try again");
           setLoginPin("");
           setConfirming(false);
@@ -345,6 +359,7 @@ export default function HotdogTracker() {
         timestamp: Date.now(),
         gif_url: null,
         video_path: videoPath,
+        notes: notes.trim() || null,
       };
       await sb.insertEntry(entry);
 
@@ -361,6 +376,7 @@ export default function HotdogTracker() {
 
       // Navigate to gallery first, then show the toast there
       setCount(1);
+      setNotes("");
       setVideoFile(null);
       setVideoFileSize("");
       setVideoState("default");
@@ -428,7 +444,7 @@ export default function HotdogTracker() {
 
                     {/* Name select */}
                     <Select
-                      label="Name"
+                      label="Category"
                       options={nameOptions}
                       value={selectedName}
                       onChange={val => {
@@ -462,7 +478,7 @@ export default function HotdogTracker() {
                     {isNewUser !== null && (selectedName !== NEW_USER_SENTINEL || true) && (
                       <div style={{ marginTop: 16 }}>
                         <Input
-                          label={isNewUser ? "Create a 4-digit PIN" : "Enter your 4-digit PIN"}
+                          label="Enter a four-digit pin"
                           type="password"
                           inputMode="numeric"
                           maxLength={4}
@@ -480,20 +496,18 @@ export default function HotdogTracker() {
                       </div>
                     )}
 
-                    {/* Confirm — shown when PIN field is visible */}
-                    {isNewUser !== null && (
-                      <div style={{ marginTop: 24 }}>
-                        <Button
-                          buttonStyle="primary"
-                          size="medium"
-                          label={confirming ? "Confirming…" : "Confirm"}
-                          loading={confirming}
-                          disabled={!activeName || loginPin.length < 4 || confirming}
-                          onClick={handlePinConfirm}
-                          style={{ width: "100%" }}
-                        />
-                      </div>
-                    )}
+                    {/* Confirm — always visible, disabled until name + PIN are ready */}
+                    <div style={{ marginTop: 24 }}>
+                      <Button
+                        buttonStyle="primary"
+                        size="medium"
+                        label={confirming ? "Confirming…" : "Confirm"}
+                        loading={confirming}
+                        disabled={!activeName || loginPin.length < 4 || confirming}
+                        onClick={handlePinConfirm}
+                        style={{ width: "100%" }}
+                      />
+                    </div>
 
                   </div>
                 </div>
@@ -536,6 +550,24 @@ export default function HotdogTracker() {
                     </div>
                   </div>
 
+                  <div className="ds-card">
+                    <div className="ds-card-header">
+                      <span className="ds-card-title">Notes (optional)</span>
+                      <span className="ds-card-subtitle">
+                        Appears as a caption on the GIF.
+                      </span>
+                    </div>
+                    <div className="ds-card-body">
+                      <Textarea
+                        value={notes}
+                        placeholder="Enter notes..."
+                        onChange={e => setNotes(e.target.value)}
+                        maxLength={120}
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                  </div>
+
                   <Button
                     buttonStyle="primary"
                     size="medium"
@@ -567,6 +599,7 @@ export default function HotdogTracker() {
                     <div key={p.name}>
                       {i > 0 && <Divider />}
                       <div className="ds-standings-row">
+                        <Avatar name={p.name} src={avatarByName[p.name]} size="sm" />
                         <span className="ds-standings-name">{p.name}</span>
                         <span className="ds-standings-count">{p.count} dog{p.count !== 1 ? "s" : ""}</span>
                       </div>
@@ -591,8 +624,10 @@ export default function HotdogTracker() {
                     state={e.gif_url ? "default" : "loading"}
                     gifUrl={e.gif_url}
                     name={e.name}
+                    avatarUrl={avatarByName[e.name] ?? undefined}
                     count={e.count}
                     date={formatDate(e.timestamp)}
+                    notes={e.notes ?? undefined}
                     progress={processingIds.has(e.id) ? 50 : undefined}
                     style={{ width: "100%" }}
                   />

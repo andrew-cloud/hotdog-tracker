@@ -5,6 +5,9 @@
 // Then import components from here:
 //   import { Button, GifTile, UploadField } from './design-system'
 
+export { default as Avatar }      from './components/Avatar';
+export type { AvatarProps, AvatarSize } from './components/Avatar';
+
 export { default as Button }      from './components/Button';
 export type { ButtonProps, ButtonStyle, ButtonSize, ButtonState } from './components/Button';
 
@@ -40,6 +43,9 @@ export type { ToastProps, ToastType } from './components/Toast';
 
 export { default as Toggle }      from './components/Toggle';
 export type { ToggleProps }       from './components/Toggle';
+
+export { default as Textarea }    from './components/Textarea';
+export type { TextareaProps, TextareaState } from './components/Textarea';
 
 export { default as UploadField } from './components/UploadField';
 export type { UploadFieldProps, UploadFieldState } from './components/UploadField';
