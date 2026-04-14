@@ -73,12 +73,12 @@ const sb = {
     const { valid } = await res.json();
     return valid;
   },
-  async createUser(displayName, pin) {
+  async createUser(displayName, pin, avatarUrl) {
     const nameKey = displayName.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
     const res = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
       method: "POST",
       headers: { ...this.headers, "Prefer": "return=representation" },
-      body: JSON.stringify({ name_key: nameKey, display_name: displayName, pin }),
+      body: JSON.stringify({ name_key: nameKey, display_name: displayName, pin, avatar_url: avatarUrl }),
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
@@ -152,6 +152,16 @@ function formatDate(timestamp) {
 
 const NEW_USER_SENTINEL = "__new__";
 
+const EMOJI_POOL = [
+  "🌭","🍔","🍕","🌮","🥩","🍗","🥓","🧆","🌯","🍱",
+  "🦁","🐯","🦊","🦝","🐺","🐸","🦈","🦅","🦉","🐉",
+  "🦄","🐙","🦑","🦋","🐻","🦖","🐊","🦩","🐆","🦓",
+];
+
+function pickEmoji() {
+  return EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)];
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 
 export default function HotdogTracker() {
@@ -171,6 +181,7 @@ export default function HotdogTracker() {
   const [selectedName, setSelectedName] = useState("");
   const [customName, setCustomName] = useState("");
   const [loginPin, setLoginPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
   const [loginError, setLoginError] = useState("");
   const [isNewUser, setIsNewUser] = useState(null);
   const [confirming, setConfirming] = useState(false);
@@ -250,6 +261,7 @@ export default function HotdogTracker() {
       // New contestant — show both fields immediately, no lookup
       setIsNewUser(true);
       setLoginPin("");
+      setConfirmPin("");
       setLoginError("");
       return;
     }
@@ -261,6 +273,7 @@ export default function HotdogTracker() {
     let cancelled = false;
     setIsNewUser(null);
     setLoginPin("");
+    setConfirmPin("");
     setLoginError("");
     (async () => {
       try {
@@ -282,6 +295,10 @@ export default function HotdogTracker() {
       setLoginError("Enter your 4-digit PIN");
       return;
     }
+    if (isNewUser && confirmPin !== loginPin) {
+      setLoginError("PINs don't match — try again");
+      return;
+    }
     setConfirming(true);
     setLoginError("");
     try {
@@ -293,12 +310,14 @@ export default function HotdogTracker() {
           setConfirming(false);
           return;
         }
-        await sb.createUser(activeName, loginPin);
+        const emoji = pickEmoji();
+        await sb.createUser(activeName, loginPin, emoji);
         setUsers(prev => [...prev, activeName].sort());
+        setAvatarByName(prev => ({ ...prev, [activeName]: emoji }));
       } else {
         const valid = await sb.verifyPin(activeName, loginPin);
         if (!valid) {
-          setLoginError("Wrong PIN — try again");
+          setLoginError("Incorrect PIN");
           setLoginPin("");
           setConfirming(false);
           return;
@@ -309,6 +328,7 @@ export default function HotdogTracker() {
       setSelectedName("");
       setCustomName("");
       setLoginPin("");
+      setConfirmPin("");
       setIsNewUser(null);
     } catch {
       setLoginError("Something went wrong");
@@ -399,8 +419,8 @@ export default function HotdogTracker() {
       if (!acc[k]) acc[k] = { name: e.name, count: 0 };
       acc[k].count += e.count;
       return acc;
-    }, {})
-  ).sort((a, b) => b.count - a.count);
+    }, Object.fromEntries(users.map(u => [u.toLowerCase(), { name: u, count: 0 }])))
+  ).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 
   const gallery = entries.filter(e => e.video_path || e.gif_url);
 
@@ -438,13 +458,13 @@ export default function HotdogTracker() {
               {step === "auth" && (
                 <div className="ds-card ds-card-overflow">
                   <div className="ds-card-header">
-                    <span className="ds-card-title">Who ate?</span>
+                    <span className="ds-card-title">Who's chowin' down?</span>
                   </div>
                   <div className="ds-card-body">
 
                     {/* Name select */}
                     <Select
-                      label="Category"
+                      label="Contestant"
                       options={nameOptions}
                       value={selectedName}
                       onChange={val => {
@@ -475,10 +495,10 @@ export default function HotdogTracker() {
 
                     {/* PIN field — for existing users: appears after name selected + lookup done
                                    for new contestants: appears immediately on selection */}
-                    {isNewUser !== null && (selectedName !== NEW_USER_SENTINEL || true) && (
+                    {isNewUser !== null && (
                       <div style={{ marginTop: 16 }}>
                         <Input
-                          label="Enter a four-digit pin"
+                          label={isNewUser ? "Enter a four-digit PIN" : "Enter your PIN"}
                           type="password"
                           inputMode="numeric"
                           maxLength={4}
@@ -487,23 +507,44 @@ export default function HotdogTracker() {
                             setLoginPin(e.target.value.replace(/\D/g, "").slice(0, 4));
                             setLoginError("");
                           }}
-                          onKeyDown={e => { if (e.key === "Enter" && loginPin.length === 4) handlePinConfirm(); }}
-                          state={loginError && loginPin.length === 0 ? "default" : loginError ? "error" : "default"}
-                          hint={loginError && loginPin.length > 0 ? loginError : undefined}
-                          showHint={!!(loginError && loginPin.length > 0)}
+                          onKeyDown={e => { if (e.key === "Enter" && loginPin.length === 4 && (!isNewUser || confirmPin.length === 4)) handlePinConfirm(); }}
+                          state={loginError && !isNewUser ? "error" : "default"}
+                          hint={!isNewUser ? loginError : undefined}
+                          showHint={!isNewUser && !!loginError}
                           autoFocus={!isNewUser}
                         />
                       </div>
                     )}
 
-                    {/* Confirm — always visible, disabled until name + PIN are ready */}
+                    {/* Confirm PIN — new contestants only */}
+                    {isNewUser && (
+                      <div style={{ marginTop: 16 }}>
+                        <Input
+                          label="Confirm PIN"
+                          type="password"
+                          inputMode="numeric"
+                          maxLength={4}
+                          value={confirmPin}
+                          onChange={e => {
+                            setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 4));
+                            setLoginError("");
+                          }}
+                          onKeyDown={e => { if (e.key === "Enter" && confirmPin.length === 4) handlePinConfirm(); }}
+                          state={loginError && confirmPin.length > 0 ? "error" : "default"}
+                          hint={loginError && confirmPin.length > 0 ? loginError : undefined}
+                          showHint={!!(loginError && confirmPin.length > 0)}
+                        />
+                      </div>
+                    )}
+
+                    {/* Confirm — always visible, disabled until name + PIN (+ confirm) are ready */}
                     <div style={{ marginTop: 24 }}>
                       <Button
                         buttonStyle="primary"
                         size="medium"
                         label={confirming ? "Confirming…" : "Confirm"}
                         loading={confirming}
-                        disabled={!activeName || loginPin.length < 4 || confirming}
+                        disabled={!activeName || loginPin.length < 4 || (isNewUser && confirmPin.length < 4) || confirming}
                         onClick={handlePinConfirm}
                         style={{ width: "100%" }}
                       />
@@ -514,7 +555,7 @@ export default function HotdogTracker() {
               )}
 
 
-              {/* Step 3 — Dog entry form */}
+              {/* Step 2 — Dog entry form */}
               {step === "entry" && (
                 <>
                   <p className="ds-welcome">
@@ -534,7 +575,7 @@ export default function HotdogTracker() {
                     <div className="ds-card-header">
                       <span className="ds-card-title">Video proof (required)</span>
                       <span className="ds-card-subtitle">
-                        Videos will be auto-converted to sped up gifs and added to the gallery wall.
+                        Your video will be converted to a gif and proudly displayed in the gallery.
                       </span>
                     </div>
                     <div className="ds-card-body">
@@ -554,13 +595,13 @@ export default function HotdogTracker() {
                     <div className="ds-card-header">
                       <span className="ds-card-title">Notes (optional)</span>
                       <span className="ds-card-subtitle">
-                        Appears as a caption on the GIF.
+                        Optional, but everyone loves a good story.
                       </span>
                     </div>
                     <div className="ds-card-body">
                       <Textarea
                         value={notes}
-                        placeholder="Enter notes..."
+                        placeholder={`"So there I was, just me and the 7/11 employee..."`}
                         onChange={e => setNotes(e.target.value)}
                         maxLength={120}
                         style={{ width: "100%" }}
@@ -589,23 +630,33 @@ export default function HotdogTracker() {
               <div className="ds-card-header">
                 <span className="ds-card-title">Standings</span>
               </div>
-              <div className="ds-card-body" style={{ padding: "8px 20px" }}>
+              <div className="ds-card-body" style={{ padding: "20px" }}>
                 {loadingData ? (
                   <p className="ds-empty">Loading…</p>
                 ) : standings.length === 0 ? (
                   <p className="ds-empty">No entries yet — be the first! 🌭</p>
-                ) : (
-                  standings.map((p, i) => (
-                    <div key={p.name}>
-                      {i > 0 && <Divider />}
-                      <div className="ds-standings-row">
-                        <Avatar name={p.name} src={avatarByName[p.name]} size="sm" />
-                        <span className="ds-standings-name">{p.name}</span>
-                        <span className="ds-standings-count">{p.count} dog{p.count !== 1 ? "s" : ""}</span>
+                ) : (() => {
+                  const leaderCount = standings[0].count;
+                  return standings.map((p, i) => {
+                    const delta = p.count - leaderCount;
+                    const deltaLabel = delta === 0 ? "--" : String(delta);
+                    return (
+                      <div key={p.name}>
+                        {i > 0 && <Divider />}
+                        <div className="ds-standings-row">
+                          <div className="ds-standings-left">
+                            <Avatar name={p.name} src={avatarByName[p.name]} size="sm" />
+                            <span className="ds-standings-name">{p.name}</span>
+                          </div>
+                          <div className="ds-standings-right">
+                            <span className="ds-standings-count">{p.count}</span>
+                            <span className="ds-standings-delta">{deltaLabel}</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))
-                )}
+                    );
+                  });
+                })()}
               </div>
             </div>
           )}
