@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Avatar from "./Avatar";
 
 // ── Types ─────────────────────────────────────────────
@@ -86,8 +86,37 @@ export default function GifTile({
 }: GifTileProps) {
   const isLoading = state === "loading";
 
+  // ── Lazy-load / pause-when-off-screen ─────────────────
+  // Only tiles with a real gifUrl participate — loading tiles always show spinner.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (!gifUrl) return; // nothing to lazy-load
+
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      {
+        // Start loading 150px before the tile scrolls into view;
+        // clear src 150px after it scrolls out so re-entry is instant from cache.
+        rootMargin: "150px 0px",
+        threshold:  0,
+      }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [gifUrl]);
+
+  // Visible src: only set when the tile is in (or near) the viewport.
+  const activeSrc = gifUrl && isVisible ? gifUrl : undefined;
+
   return (
     <div
+      ref={containerRef}
       className={className}
       onClick={onClick}
       style={{
@@ -117,9 +146,9 @@ export default function GifTile({
         justifyContent: "center",
         background:     "var(--surface\\/bg-tertiary, #1e1e28)",
       }}>
-        {!isLoading && gifUrl && (
+        {!isLoading && activeSrc && (
           <img
-            src={gifUrl}
+            src={activeSrc}
             alt="Hotdog submission"
             style={{ display: "block", width: "100%", height: "auto" }}
           />
