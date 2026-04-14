@@ -100,9 +100,11 @@ export default function GifTile({
     const observer = new IntersectionObserver(
       ([entry]) => setIsVisible(entry.isIntersecting),
       {
-        // Start loading 150px before the tile scrolls into view;
-        // clear src 150px after it scrolls out so re-entry is instant from cache.
-        rootMargin: "150px 0px",
+        // Start loading 500px before the tile scrolls into view so the GIF
+        // is ready well before it reaches the viewport.
+        // Only clear src once the tile is 150px past the bottom of the screen
+        // so re-entry from a short scroll-back is instant from cache.
+        rootMargin: "500px 0px 150px 0px",
         threshold:  0,
       }
     );
