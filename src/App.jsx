@@ -263,9 +263,10 @@ export default function HotdogTracker() {
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  // gallery.length is required: on first load gallery is empty so the sentinel
-  // doesn't exist yet. When data arrives and the sentinel appears, this re-runs.
-  }, [tab, visibleCount, gallery.length]);
+  // entries is used instead of gallery here because gallery is derived later in
+  // the component and would cause a temporal dead zone crash in the dep array.
+  // entries.length changing means gallery.length may have changed too.
+  }, [tab, visibleCount, entries.length]);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
