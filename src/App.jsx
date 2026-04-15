@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import "./App.css";
 import { Avatar, Button, Input, Stepper, Textarea, UploadField, GifTile, Toast, Divider, TabBar, Select } from "./design-system";
 
@@ -204,9 +204,11 @@ export default function HotdogTracker() {
   const [processingIds, setProcessingIds] = useState(new Set());
   const [toast, setToast] = useState(null);
 
-  const pollRef     = useRef(null);
-  const sentinelRef = useRef(null);
-  const [visibleCount, setVisibleCount] = useState(8);
+  const pollRef          = useRef(null);
+  const topSentinelRef   = useRef(null);
+  const bottomSentinelRef = useRef(null);
+  const scrollAnchor     = useRef(null); // { id, top } — set before each window shift
+  const [windowStart, setWindowStart] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -241,32 +243,76 @@ export default function HotdogTracker() {
     return () => clearInterval(pollRef.current);
   }, [processingIds]);
 
+  // ── Gallery window (derived early so effects can reference gallery) ──────
+  const gallery = entries.filter(e => e.video_path || e.gif_url);
+
+  // Sliding window constants
+  const WINDOW_SIZE      = 24;  // max tiles in the DOM at once
+  const BATCH_SIZE       = 8;   // tiles added/removed per step
+  const EST_TILE_HEIGHT  = 400; // rough px height used for spacer sizing only
+
+  const windowEnd      = Math.min(windowStart + WINDOW_SIZE, gallery.length);
+  const hasMoreBelow   = windowEnd < gallery.length;
+  const hasMoreAbove   = windowStart > 0;
+
   // ── Gallery pagination ────────────────────────────────────────────────────
-  // Watch a sentinel div below the last visible tile; load 8 more when it
-  // enters the viewport. Resets to 8 whenever the user leaves the gallery tab.
+  // Two sentinels bookend the visible window.
+  //   Bottom sentinel → slide window forward (scroll down)
+  //   Top sentinel    → slide window back    (scroll up)
+  // After each shift, useLayoutEffect restores scroll position exactly using
+  // getBoundingClientRect on a saved anchor element (no layout estimates needed).
   useEffect(() => {
     if (tab !== "gallery") {
-      setVisibleCount(8);
+      setWindowStart(0);
       return;
     }
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisibleCount(prev => prev + 8);
+    const observers = [];
+
+    const bottom = bottomSentinelRef.current;
+    if (bottom && hasMoreBelow) {
+      const obs = new IntersectionObserver(([e]) => {
+        if (!e.isIntersecting) return;
+        // Anchor = first tile that will survive the trim (stays visible after shift)
+        const anchor = gallery[windowStart + BATCH_SIZE];
+        if (anchor) {
+          const el = document.getElementById(`tile-${anchor.id}`);
+          if (el) scrollAnchor.current = { id: `tile-${anchor.id}`, top: el.getBoundingClientRect().top };
         }
-      },
-      { rootMargin: "200px" }
-    );
+        setWindowStart(prev => prev + BATCH_SIZE);
+      }, { rootMargin: "200px" });
+      obs.observe(bottom);
+      observers.push(obs);
+    }
 
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  // entries is used instead of gallery here because gallery is derived later in
-  // the component and would cause a temporal dead zone crash in the dep array.
-  // entries.length changing means gallery.length may have changed too.
-  }, [tab, visibleCount, entries.length]);
+    const top = topSentinelRef.current;
+    if (top && hasMoreAbove) {
+      const obs = new IntersectionObserver(([e]) => {
+        if (!e.isIntersecting) return;
+        // Anchor = first currently-visible tile (will move down as tiles are prepended)
+        const anchor = gallery[windowStart];
+        if (anchor) {
+          const el = document.getElementById(`tile-${anchor.id}`);
+          if (el) scrollAnchor.current = { id: `tile-${anchor.id}`, top: el.getBoundingClientRect().top };
+        }
+        setWindowStart(prev => Math.max(0, prev - BATCH_SIZE));
+      }, { rootMargin: "200px" });
+      obs.observe(top);
+      observers.push(obs);
+    }
+
+    return () => observers.forEach(o => o.disconnect());
+  }, [tab, windowStart, gallery.length]);
+
+  // After the DOM updates from a window shift, restore the anchor element to
+  // the same viewport position it had before. This prevents any visible jump.
+  useLayoutEffect(() => {
+    if (!scrollAnchor.current) return;
+    const { id, top: savedTop } = scrollAnchor.current;
+    const el = document.getElementById(id);
+    if (el) window.scrollBy(0, el.getBoundingClientRect().top - savedTop);
+    scrollAnchor.current = null;
+  }, [windowStart]);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -450,8 +496,6 @@ export default function HotdogTracker() {
       return acc;
     }, Object.fromEntries(users.map(u => [u.toLowerCase(), { name: u, count: 0 }])))
   ).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-
-  const gallery = entries.filter(e => e.video_path || e.gif_url);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -699,23 +743,36 @@ export default function HotdogTracker() {
                 <p className="ds-empty">No GIFs yet — upload a video when logging! 🎬</p>
               ) : (
                 <>
-                  {gallery.slice(0, visibleCount).map(e => (
-                    <GifTile
-                      key={e.id}
-                      state={e.gif_url ? "default" : "loading"}
-                      gifUrl={e.gif_url}
-                      name={e.name}
-                      avatarUrl={avatarByName[e.name] ?? undefined}
-                      count={e.count}
-                      date={formatDate(e.timestamp)}
-                      notes={e.notes ?? undefined}
-                      progress={processingIds.has(e.id) ? 50 : undefined}
-                      style={{ width: "100%" }}
-                    />
+                  {/* Top spacer + sentinel — represent tiles scrolled above the window */}
+                  {hasMoreAbove && (
+                    <>
+                      <div style={{ height: windowStart * EST_TILE_HEIGHT, flexShrink: 0 }} />
+                      <div ref={topSentinelRef} style={{ height: 1, flexShrink: 0 }} />
+                    </>
+                  )}
+
+                  {gallery.slice(windowStart, windowEnd).map(e => (
+                    <div key={e.id} id={`tile-${e.id}`} style={{ flexShrink: 0 }}>
+                      <GifTile
+                        state={e.gif_url ? "default" : "loading"}
+                        gifUrl={e.gif_url}
+                        name={e.name}
+                        avatarUrl={avatarByName[e.name] ?? undefined}
+                        count={e.count}
+                        date={formatDate(e.timestamp)}
+                        notes={e.notes ?? undefined}
+                        progress={processingIds.has(e.id) ? 50 : undefined}
+                        style={{ width: "100%" }}
+                      />
+                    </div>
                   ))}
-                  {/* Sentinel — observed to trigger loading the next batch */}
-                  {visibleCount < gallery.length && (
-                    <div ref={sentinelRef} style={{ height: 1, width: "100%", flexShrink: 0 }} />
+
+                  {/* Bottom sentinel + spacer — represent tiles below the window */}
+                  {hasMoreBelow && (
+                    <>
+                      <div ref={bottomSentinelRef} style={{ height: 1, flexShrink: 0 }} />
+                      <div style={{ height: (gallery.length - windowEnd) * EST_TILE_HEIGHT, flexShrink: 0 }} />
+                    </>
                   )}
                 </>
               )}
