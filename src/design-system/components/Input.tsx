@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 // ── Types ─────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ const FIELD_BORDER: Record<InputState, string> = {
 };
 
 const VALUE_COLOR: Record<InputState, string> = {
-  default:  "var(--text\\/tertiary, #6b6882)",
+  default:  "var(--text\\/primary, #f0ede6)",
   focus:    "var(--text\\/primary, #f0ede6)",
   filled:   "var(--text\\/primary, #f0ede6)",
   error:    "var(--text\\/primary, #f0ede6)",
@@ -97,6 +97,8 @@ export default function Input({
   className,
   style,
 }: InputProps) {
+  const [touched, setTouched] = useState(false);
+
   const isDisabled = state === "disabled";
   const hintText   = hint ?? DEFAULT_HINTS[state];
 
@@ -173,7 +175,7 @@ export default function Input({
       <div style={fieldStyle}>
         <input
           style={inputStyle}
-          placeholder={placeholder}
+          placeholder={touched ? "" : placeholder}
           value={value}
           disabled={isDisabled}
           type={type}
@@ -182,7 +184,7 @@ export default function Input({
           autoFocus={autoFocus}
           autoComplete={autoComplete}
           pattern={pattern}
-          onChange={onChange}
+          onChange={e => { setTouched(true); onChange?.(e); }}
           onFocus={onFocus}
           onBlur={onBlur}
           onKeyDown={onKeyDown}

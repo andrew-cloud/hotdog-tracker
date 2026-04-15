@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 // ── Types ─────────────────────────────────────────────
 
@@ -43,7 +43,7 @@ const FIELD_BORDER: Record<TextareaState, string> = {
 };
 
 const VALUE_COLOR: Record<TextareaState, string> = {
-  default:  "var(--text\\/tertiary, #6b6882)",
+  default:  "var(--text\\/primary, #f0ede6)",
   focus:    "var(--text\\/primary, #f0ede6)",
   filled:   "var(--text\\/primary, #f0ede6)",
   error:    "var(--text\\/primary, #f0ede6)",
@@ -84,6 +84,8 @@ export default function Textarea({
   className,
   style,
 }: TextareaProps) {
+  const [touched, setTouched] = useState(false);
+
   const isDisabled = state === "disabled";
 
   const wrapperStyle: React.CSSProperties = {
@@ -157,12 +159,12 @@ export default function Textarea({
       <div style={fieldStyle}>
         <textarea
           style={textareaStyle}
-          placeholder={placeholder}
+          placeholder={touched ? "" : placeholder}
           value={value}
           disabled={isDisabled}
           maxLength={maxLength}
           autoFocus={autoFocus}
-          onChange={onChange}
+          onChange={e => { setTouched(true); onChange?.(e); }}
           onFocus={onFocus}
           onBlur={onBlur}
           onKeyDown={onKeyDown}
