@@ -92,7 +92,7 @@ export default function GifTile({
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    if (!gifUrl) return; // nothing to lazy-load
+    if (!gifUrl) return;
 
     const el = containerRef.current;
     if (!el) return;
@@ -100,10 +100,8 @@ export default function GifTile({
     const observer = new IntersectionObserver(
       ([entry]) => setIsVisible(entry.isIntersecting),
       {
-        // Start loading 500px before the tile scrolls into view so the GIF
-        // is ready well before it reaches the viewport.
-        // Only clear src once the tile is 150px past the bottom of the screen
-        // so re-entry from a short scroll-back is instant from cache.
+        // Wide top margin so the tile is "ready" well before it scrolls into view.
+        // Narrower bottom margin — clear src after it's safely off-screen.
         rootMargin: "500px 0px 150px 0px",
         threshold:  0,
       }
@@ -113,7 +111,7 @@ export default function GifTile({
     return () => observer.disconnect();
   }, [gifUrl]);
 
-  // Visible src: only set when the tile is in (or near) the viewport.
+  // Only load/animate when the tile is near the viewport.
   const activeSrc = gifUrl && isVisible ? gifUrl : undefined;
 
   return (
