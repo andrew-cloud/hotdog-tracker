@@ -8,6 +8,8 @@ body {
   background: var(--surface\/bg-primary, #0f0f13);
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* Prevent scroll-chain bounce from fighting the gallery scroll on mobile */
+  overscroll-behavior-y: contain;
 }
 
 /* ── App shell ────────────────────────────────────────────────────────── */

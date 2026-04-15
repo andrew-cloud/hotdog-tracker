@@ -140,7 +140,10 @@ export default function GifTile({
         position:       "relative",
         flexShrink:     0,
         width:          "100%",
-        minHeight:      isLoading ? "180px" : undefined,
+        // Reserve height whenever we know a GIF exists, even while off-screen
+        // (activeSrc cleared). Without this the area collapses to 0, causing a
+        // layout shift and scroll jank when the tile re-enters the viewport.
+        minHeight:      (isLoading || gifUrl) ? "180px" : undefined,
         display:        "flex",
         alignItems:     "center",
         justifyContent: "center",
