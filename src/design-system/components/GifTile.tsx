@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 import Avatar from "./Avatar";
 
 // ── Types ─────────────────────────────────────────────
@@ -86,37 +86,12 @@ export default function GifTile({
 }: GifTileProps) {
   const isLoading = state === "loading";
 
-  // ── Lazy-load / pause-when-off-screen ─────────────────
-  // Only tiles with a real gifUrl participate — loading tiles always show spinner.
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    if (!gifUrl) return;
-
-    const el = containerRef.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsVisible(entry.isIntersecting),
-      {
-        // Wide top margin so the tile is "ready" well before it scrolls into view.
-        // Narrower bottom margin — clear src after it's safely off-screen.
-        rootMargin: "500px 0px 150px 0px",
-        threshold:  0,
-      }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [gifUrl]);
-
-  // Only load/animate when the tile is near the viewport.
-  const activeSrc = gifUrl && isVisible ? gifUrl : undefined;
+  // Lazy-loading is handled natively by the browser via loading="lazy" on the
+  // img tag below — no per-tile IntersectionObserver needed, which keeps scroll
+  // smooth by eliminating JS observer overhead during scrolling.
 
   return (
     <div
-      ref={containerRef}
       className={className}
       onClick={onClick}
       style={{
@@ -149,10 +124,11 @@ export default function GifTile({
         justifyContent: "center",
         background:     "var(--surface\\/bg-tertiary, #1e1e28)",
       }}>
-        {!isLoading && activeSrc && (
+        {!isLoading && gifUrl && (
           <img
-            src={activeSrc}
+            src={gifUrl}
             alt="Hotdog submission"
+            loading="lazy"
             style={{ display: "block", width: "100%", height: "auto" }}
           />
         )}
