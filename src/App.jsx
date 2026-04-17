@@ -83,6 +83,27 @@ const sb = {
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
+  // Returns { [display_name_lowercase]: rank } for all contestants
+  async getRankSnapshot() {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rank_snapshots?select=display_name,rank`, { headers: this.headers });
+    if (!res.ok) throw new Error(await res.text());
+    const rows = await res.json();
+    return Object.fromEntries(rows.map(r => [r.display_name.toLowerCase(), r.rank]));
+  },
+  // Upserts current standings — called once after data loads
+  async saveRankSnapshot(standings) {
+    const rows = standings.map((p, i) => ({
+      display_name: p.name,
+      rank: i + 1,
+      updated_at: new Date().toISOString(),
+    }));
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rank_snapshots`, {
+      method: "POST",
+      headers: { ...this.headers, "Prefer": "resolution=merge-duplicates" },
+      body: JSON.stringify(rows),
+    });
+    if (!res.ok) throw new Error(await res.text());
+  },
 };
 
 // ── Mac Mini upload server ────────────────────────────────────────────────────
@@ -210,15 +231,24 @@ export default function HotdogTracker() {
   const scrollAnchor     = useRef(null); // { id, top } — set before each window shift
   const [windowStart, setWindowStart] = useState(0);
 
+  // Previous-session rank snapshot for position-change arrows (▲/▼).
+  // Fetched from Supabase on load — survives cache clears and works across devices.
+  const [prevRankByName, setPrevRankByName] = useState({});
+
   useEffect(() => {
     (async () => {
       try {
-        const [entryData, userData] = await Promise.all([sb.getEntries(), sb.getUsers()]);
+        const [entryData, userData, rankSnapshot] = await Promise.all([
+          sb.getEntries(),
+          sb.getUsers(),
+          sb.getRankSnapshot(),
+        ]);
         setEntries(entryData);
         setUsers(userData.map(u => u.display_name));
         setAvatarByName(Object.fromEntries(userData.map(u => [u.display_name, u.avatar_url ?? null])));
         const pending = new Set(entryData.filter(e => e.video_path && !e.gif_url).map(e => e.id));
         setProcessingIds(pending);
+        setPrevRankByName(rankSnapshot);
       } catch {
         showToast("Could not load data", "error");
       }
@@ -245,6 +275,22 @@ export default function HotdogTracker() {
 
   // ── Gallery window (derived early so effects can reference gallery) ──────
   const gallery = entries.filter(e => e.video_path || e.gif_url);
+
+  // After data loads, upsert the current standings to Supabase as the new snapshot.
+  // On the next page load, this becomes the "previous" state used to draw ▲/▼ arrows.
+  // Fire-and-forget — a failed write just means arrows won't update this session.
+  useEffect(() => {
+    if (loadingData) return;
+    const counted = Object.values(
+      entries.reduce((acc, e) => {
+        const k = e.name.toLowerCase();
+        if (!acc[k]) acc[k] = { name: e.name, count: 0 };
+        acc[k].count += e.count;
+        return acc;
+      }, Object.fromEntries(users.map(u => [u.toLowerCase(), { name: u, count: 0 }])))
+    ).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    sb.saveRankSnapshot(counted).catch(err => console.warn("Rank snapshot save failed:", err));
+  }, [loadingData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sliding window constants
   const WINDOW_SIZE      = 24;  // max tiles in the DOM at once
@@ -666,7 +712,7 @@ export default function HotdogTracker() {
 
                   <div className="ds-card">
                     <div className="ds-card-header">
-                      <span className="ds-card-title">Notes (optional)</span>
+                      <span className="ds-card-title">Notes</span>
                       <span className="ds-card-subtitle">
                         Optional, but everyone loves a good story.
                       </span>
@@ -711,19 +757,31 @@ export default function HotdogTracker() {
                 ) : (() => {
                   const leaderCount = standings[0].count;
                   return standings.map((p, i) => {
+                    const rank = i + 1;
+                    const prevRank = prevRankByName[p.name.toLowerCase()];
+                    // positive = moved up (e.g. was 3rd, now 1st → +2), negative = moved down
+                    const posChange = prevRank !== undefined ? prevRank - rank : 0;
                     const delta = p.count - leaderCount;
-                    const deltaLabel = delta === 0 ? "--" : String(delta);
+                    const deltaLabel = delta === 0 ? "--" : `(${delta})`;
                     return (
                       <div key={p.name}>
                         {i > 0 && <Divider />}
                         <div className="ds-standings-row">
+                          {/* Rank + position-change arrow */}
+                          <div className="ds-standings-rank-col">
+                            {posChange > 0 && <span className="ds-rank-arrow up">▲</span>}
+                            <span className="ds-rank-num">{rank}</span>
+                            {posChange < 0 && <span className="ds-rank-arrow down">▼</span>}
+                          </div>
+                          {/* Avatar + name */}
                           <div className="ds-standings-left">
                             <Avatar name={p.name} src={avatarByName[p.name]} size="sm" />
                             <span className="ds-standings-name">{p.name}</span>
                           </div>
+                          {/* Dogs-back delta + count */}
                           <div className="ds-standings-right">
-                            <span className="ds-standings-count">{p.count}</span>
                             <span className="ds-standings-delta">{deltaLabel}</span>
+                            <span className="ds-standings-count">{p.count}</span>
                           </div>
                         </div>
                       </div>
