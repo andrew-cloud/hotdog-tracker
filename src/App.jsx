@@ -170,6 +170,68 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+// ── Streak helpers ────────────────────────────────────────────────────────────
+
+function toDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Returns { name, streak, active } for the person with the longest all-time
+// streak of consecutive calendar days with at least one logged entry.
+// "active" = the longest streak ends today or yesterday (still unbroken).
+// Tie-break: whoever reached that streak length first (earlier end date wins).
+function computeLongestStreak(entries) {
+  if (!entries.length) return null;
+
+  const today = new Date();
+  const todayStr     = toDateStr(today);
+  const yesterday    = new Date(today); yesterday.setDate(today.getDate() - 1);
+  const yesterdayStr = toDateStr(yesterday);
+
+  // Collect unique calendar dates per user
+  const byUser = {};
+  for (const e of entries) {
+    if (!byUser[e.name]) byUser[e.name] = new Set();
+    byUser[e.name].add(toDateStr(new Date(e.timestamp)));
+  }
+
+  let best = null;
+
+  for (const [name, datesSet] of Object.entries(byUser)) {
+    const dates = [...datesSet].sort(); // "YYYY-MM-DD" sorts lexicographically
+    let longestLen = 1, longestEnd = dates[0], cur = 1;
+
+    for (let i = 1; i < dates.length; i++) {
+      // Difference in calendar days between consecutive logged dates
+      const diffMs = new Date(dates[i] + "T00:00:00") - new Date(dates[i - 1] + "T00:00:00");
+      if (Math.round(diffMs / 86400000) === 1) {
+        cur++;
+        if (cur > longestLen) { longestLen = cur; longestEnd = dates[i]; }
+      } else {
+        cur = 1;
+      }
+    }
+
+    // The longest streak is "active" only if its final day is today or yesterday
+    // AND that final day is also the person's most recent logged day
+    // (prevents labelling a 10-day streak from last year as "active" just
+    //  because they started a new streak today)
+    const lastDate = dates[dates.length - 1];
+    const active   = longestEnd === lastDate && (lastDate === todayStr || lastDate === yesterdayStr);
+
+    if (
+      !best ||
+      longestLen > best.streak ||
+      // Tie-break: whoever completed the streak on the earlier date achieved it first
+      (longestLen === best.streak && longestEnd < best.longestEnd)
+    ) {
+      best = { name, streak: longestLen, active, longestEnd };
+    }
+  }
+
+  return best;
+}
+
 // ── Monthly battle helpers ────────────────────────────────────────────────────
 
 const MONTH_NAMES = [
@@ -364,6 +426,9 @@ export default function HotdogTracker() {
 
   // Past champion cards — exclude current month in case it got seeded early
   const pastChampions = monthlyChampions.filter(c => c.month < currentMonthStr);
+
+  // Longest streak across all contestants
+  const longestStreak = computeLongestStreak(entries);
 
   // Sliding window constants
   const WINDOW_SIZE      = 24;  // max tiles in the DOM at once
@@ -861,6 +926,32 @@ export default function HotdogTracker() {
                   })()}
                 </div>
               </div>
+
+              {/* ── Longest streak card ── */}
+              {!loadingData && (
+                <div className="ds-card ds-streak-card">
+                  <div className="ds-streak-header">
+                    <span className="ds-streak-icon">🔥</span>
+                    <span className="ds-streak-title">Longest Streak</span>
+                  </div>
+                  <div className="ds-card-body" style={{ padding: "12px 20px 16px" }}>
+                    {longestStreak ? (
+                      <div className="ds-standings-row">
+                        <div className="ds-standings-left">
+                          <Avatar name={longestStreak.name} src={avatarByName[longestStreak.name]} size="sm" />
+                          <span className="ds-standings-name">{longestStreak.name}</span>
+                        </div>
+                        <div className="ds-streak-right">
+                          <span className="ds-standings-count">{longestStreak.streak} days</span>
+                          {longestStreak.active && <span className="ds-streak-active">(active)</span>}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="ds-empty" style={{ padding: "8px 0" }}>No one has logged a dog yet</p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* ── Battle card (current month) ── */}
               {!loadingData && showBattleCard && (
