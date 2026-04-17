@@ -104,6 +104,15 @@ const sb = {
     });
     if (!res.ok) throw new Error(await res.text());
   },
+  // Returns all past monthly champions sorted newest-first
+  async getMonthlyChampions() {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/monthly_champions?select=month,winner_name,dog_count&order=month.desc`,
+      { headers: this.headers }
+    );
+    if (!res.ok) throw new Error(await res.text());
+    return res.json(); // [{ month, winner_name, dog_count }, ...]
+  },
 };
 
 // ── Mac Mini upload server ────────────────────────────────────────────────────
@@ -159,6 +168,32 @@ async function uploadVideoViaMacMini(id, file, onProgress) {
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// ── Monthly battle helpers ────────────────────────────────────────────────────
+
+const MONTH_NAMES = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December",
+];
+
+// "2026-04" → "April"
+function monthStrToName(monthStr) {
+  const month = parseInt(monthStr.split("-")[1], 10);
+  return MONTH_NAMES[month - 1];
+}
+
+// Countdown from now to end of the given month (local time)
+function getCountdown(now) {
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  const diff = end - now;
+  if (diff <= 0) return "Ended";
+  const days    = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours   = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  if (days >= 1) return `${days}d ${hours}h`;
+  return `${hours}h ${minutes}m ${seconds}s`;
 }
 
 function formatDate(timestamp) {
@@ -224,6 +259,7 @@ export default function HotdogTracker() {
   const [loadingData, setLoadingData] = useState(true);
   const [processingIds, setProcessingIds] = useState(new Set());
   const [toast, setToast] = useState(null);
+  const [monthlyChampions, setMonthlyChampions] = useState([]);
 
   const pollRef          = useRef(null);
   const topSentinelRef   = useRef(null);
@@ -238,10 +274,11 @@ export default function HotdogTracker() {
   useEffect(() => {
     (async () => {
       try {
-        const [entryData, userData, rankSnapshot] = await Promise.all([
+        const [entryData, userData, rankSnapshot, champions] = await Promise.all([
           sb.getEntries(),
           sb.getUsers(),
           sb.getRankSnapshot(),
+          sb.getMonthlyChampions(),
         ]);
         setEntries(entryData);
         setUsers(userData.map(u => u.display_name));
@@ -249,6 +286,7 @@ export default function HotdogTracker() {
         const pending = new Set(entryData.filter(e => e.video_path && !e.gif_url).map(e => e.id));
         setProcessingIds(pending);
         setPrevRankByName(rankSnapshot);
+        setMonthlyChampions(champions);
       } catch {
         showToast("Could not load data", "error");
       }
@@ -291,6 +329,41 @@ export default function HotdogTracker() {
     ).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
     sb.saveRankSnapshot(counted).catch(err => console.warn("Rank snapshot save failed:", err));
   }, [loadingData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Monthly battle ────────────────────────────────────────────────────────
+  // Current month string e.g. "2026-04"
+  const nowDate = new Date();
+  const currentMonthStr = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, "0")}`;
+  const currentMonthName = MONTH_NAMES[nowDate.getMonth()];
+  // Only show a battle card up through April 2027
+  const showBattleCard = currentMonthStr <= "2027-04";
+
+  // Entries logged in the current calendar month
+  const monthStart = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1).getTime();
+  const monthEnd   = new Date(nowDate.getFullYear(), nowDate.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+  const battleEntries = entries.filter(e => e.timestamp >= monthStart && e.timestamp <= monthEnd);
+
+  // Aggregate into battle standings — top 3, tie-break: most dogs, then earliest last entry
+  const battleTotals = {};
+  for (const e of battleEntries) {
+    const k = e.name.toLowerCase();
+    if (!battleTotals[k]) battleTotals[k] = { name: e.name, count: 0, lastTs: 0 };
+    battleTotals[k].count += e.count;
+    battleTotals[k].lastTs = Math.max(battleTotals[k].lastTs, e.timestamp);
+  }
+  const battleStandings = Object.values(battleTotals)
+    .sort((a, b) => b.count - a.count || a.lastTs - b.lastTs)
+    .slice(0, 3);
+
+  // Live countdown to end of month
+  const [countdown, setCountdown] = useState(() => getCountdown(new Date()));
+  useEffect(() => {
+    const interval = setInterval(() => setCountdown(getCountdown(new Date())), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Past champion cards — exclude current month in case it got seeded early
+  const pastChampions = monthlyChampions.filter(c => c.month < currentMonthStr);
 
   // Sliding window constants
   const WINDOW_SIZE      = 24;  // max tiles in the DOM at once
@@ -745,51 +818,98 @@ export default function HotdogTracker() {
 
           {/* ══ STANDINGS TAB ════════════════════════════════════════════════ */}
           {tab === "standings" && (
-            <div className="ds-card ds-card-shadow">
-              <div className="ds-card-header">
-                <span className="ds-card-title">Standings</span>
+            <>
+              {/* ── Overall standings card ── */}
+              <div className="ds-card ds-card-shadow">
+                <div className="ds-card-header">
+                  <span className="ds-card-title">Standings</span>
+                </div>
+                <div className="ds-card-body" style={{ padding: "20px" }}>
+                  {loadingData ? (
+                    <p className="ds-empty">Loading…</p>
+                  ) : standings.length === 0 ? (
+                    <p className="ds-empty">No entries yet — be the first! 🌭</p>
+                  ) : (() => {
+                    const leaderCount = standings[0].count;
+                    return standings.map((p, i) => {
+                      const rank = i + 1;
+                      const prevRank = prevRankByName[p.name.toLowerCase()];
+                      const posChange = prevRank !== undefined ? prevRank - rank : 0;
+                      const delta = p.count - leaderCount;
+                      const deltaLabel = delta === 0 ? "--" : `(${delta})`;
+                      return (
+                        <div key={p.name}>
+                          {i > 0 && <Divider />}
+                          <div className="ds-standings-row">
+                            <div className="ds-standings-rank-col">
+                              {posChange > 0 && <span className="ds-rank-arrow up">▲</span>}
+                              <span className="ds-rank-num">{rank}</span>
+                              {posChange < 0 && <span className="ds-rank-arrow down">▼</span>}
+                            </div>
+                            <div className="ds-standings-left">
+                              <Avatar name={p.name} src={avatarByName[p.name]} size="sm" />
+                              <span className="ds-standings-name">{p.name}</span>
+                            </div>
+                            <div className="ds-standings-right">
+                              <span className="ds-standings-delta">{deltaLabel}</span>
+                              <span className="ds-standings-count">{p.count}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
               </div>
-              <div className="ds-card-body" style={{ padding: "20px" }}>
-                {loadingData ? (
-                  <p className="ds-empty">Loading…</p>
-                ) : standings.length === 0 ? (
-                  <p className="ds-empty">No entries yet — be the first! 🌭</p>
-                ) : (() => {
-                  const leaderCount = standings[0].count;
-                  return standings.map((p, i) => {
-                    const rank = i + 1;
-                    const prevRank = prevRankByName[p.name.toLowerCase()];
-                    // positive = moved up (e.g. was 3rd, now 1st → +2), negative = moved down
-                    const posChange = prevRank !== undefined ? prevRank - rank : 0;
-                    const delta = p.count - leaderCount;
-                    const deltaLabel = delta === 0 ? "--" : `(${delta})`;
-                    return (
+
+              {/* ── Battle card (current month) ── */}
+              {!loadingData && showBattleCard && (
+                <div className="ds-card ds-battle-card">
+                  <div className="ds-battle-header">
+                    <div className="ds-battle-title-row">
+                      <span className="ds-battle-icon">⚔️</span>
+                      <span className="ds-battle-title">The Battle for {currentMonthName}</span>
+                    </div>
+                    <span className="ds-battle-countdown">{countdown}</span>
+                  </div>
+                  <div className="ds-card-body" style={{ padding: "12px 20px 16px" }}>
+                    {battleStandings.length === 0 ? (
+                      <p className="ds-empty" style={{ padding: "8px 0" }}>No one has logged a dog yet</p>
+                    ) : battleStandings.map((p, i) => (
                       <div key={p.name}>
                         {i > 0 && <Divider />}
                         <div className="ds-standings-row">
-                          {/* Rank + position-change arrow */}
-                          <div className="ds-standings-rank-col">
-                            {posChange > 0 && <span className="ds-rank-arrow up">▲</span>}
-                            <span className="ds-rank-num">{rank}</span>
-                            {posChange < 0 && <span className="ds-rank-arrow down">▼</span>}
-                          </div>
-                          {/* Avatar + name */}
                           <div className="ds-standings-left">
                             <Avatar name={p.name} src={avatarByName[p.name]} size="sm" />
                             <span className="ds-standings-name">{p.name}</span>
                           </div>
-                          {/* Dogs-back delta + count */}
-                          <div className="ds-standings-right">
-                            <span className="ds-standings-delta">{deltaLabel}</span>
-                            <span className="ds-standings-count">{p.count}</span>
-                          </div>
+                          <span className="ds-standings-count">{p.count}</span>
                         </div>
                       </div>
-                    );
-                  });
-                })()}
-              </div>
-            </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Champion cards (past months, newest first) ── */}
+              {!loadingData && pastChampions.map(c => (
+                <div key={c.month} className="ds-card ds-champion-card">
+                  <div className="ds-champion-header">
+                    <span className="ds-champion-icon">🏆</span>
+                    <span className="ds-champion-title">{monthStrToName(c.month)}'s Champion</span>
+                  </div>
+                  <div className="ds-card-body" style={{ padding: "12px 20px 16px" }}>
+                    <div className="ds-standings-row">
+                      <div className="ds-standings-left">
+                        <Avatar name={c.winner_name} src={avatarByName[c.winner_name]} size="sm" />
+                        <span className="ds-standings-name">{c.winner_name}</span>
+                      </div>
+                      <span className="ds-standings-count">{c.dog_count}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
           )}
 
           {/* ══ GALLERY TAB ══════════════════════════════════════════════════ */}

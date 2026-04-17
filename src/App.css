@@ -130,15 +130,46 @@ body {
 /* ── Standings ────────────────────────────────────────────────────────── */
 .ds-standings-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
+  gap: 10px;
 }
+
+/* Rank column — fixed width, stacks rank number + arrow indicator */
+.ds-standings-rank-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  flex-shrink: 0;
+  gap: 1px;
+}
+
+.ds-rank-num {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--text\/secondary, #9e9bb4);
+}
+
+.ds-rank-arrow {
+  font-size: 7px;
+  line-height: 1;
+}
+
+.ds-rank-arrow.up   { color: #4ade80; }
+.ds-rank-arrow.down { color: #f87171; }
 
 .ds-standings-left {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .ds-standings-name {
@@ -148,31 +179,35 @@ body {
   line-height: 26px;
   color: #ffffff;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
+/* Right side — delta + count on the same line */
 .ds-standings-right {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 0;
+  gap: 6px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .ds-standings-count {
   font-family: 'Inter', sans-serif;
   font-size: 16px;
-  font-weight: 400;
+  font-weight: 600;
   line-height: 26px;
   color: #ffffff;
 }
 
 .ds-standings-delta {
   font-family: 'Inter', sans-serif;
-  font-size: 12px;
-  font-weight: 300;
+  font-size: 13px;
+  font-weight: 400;
   font-style: italic;
-  line-height: 1;
-  color: var(--text\/secondary, #6b6882);
+  color: var(--text\/secondary, #9e9bb4);
 }
 
 /* ── Empty state ──────────────────────────────────────────────────────── */
@@ -183,4 +218,73 @@ body {
   text-align: center;
   padding: 32px 0;
   margin: 0;
+}
+
+/* ── Battle card (active monthly competition) ─────────────────────────── */
+.ds-battle-card {
+  border-left: 3px solid #e8a44a;  /* amber accent matches "In the Ring" badge */
+}
+
+.ds-battle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--component\/card-header-border, #2e2e40);
+  background: var(--component\/card-header-bg, #1e1e28);
+  gap: 8px;
+}
+
+.ds-battle-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ds-battle-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.ds-battle-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text\/primary, #f0ede6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ds-battle-countdown {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #e8a44a;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;  /* prevents width jumping as digits change */
+}
+
+/* ── Champion card (past month winners) ───────────────────────────────── */
+.ds-champion-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--component\/card-header-border, #2e2e40);
+  background: var(--component\/card-header-bg, #1e1e28);
+}
+
+.ds-champion-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.ds-champion-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text\/primary, #f0ede6);
 }
