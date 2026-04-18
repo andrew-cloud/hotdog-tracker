@@ -413,21 +413,9 @@ export default function HotdogTracker() {
   // ── Gallery window (derived early so effects can reference gallery) ──────
   const gallery = entries.filter(e => e.video_path || e.gif_url);
 
-  // After data loads, upsert the current standings to Supabase as the new snapshot.
-  // On the next page load, this becomes the "previous" state used to draw ▲/▼ arrows.
-  // Fire-and-forget — a failed write just means arrows won't update this session.
-  useEffect(() => {
-    if (loadingData) return;
-    const counted = Object.values(
-      entries.reduce((acc, e) => {
-        const k = e.name.toLowerCase();
-        if (!acc[k]) acc[k] = { name: e.name, count: 0 };
-        acc[k].count += e.count;
-        return acc;
-      }, Object.fromEntries(users.map(u => [u.toLowerCase(), { name: u, count: 0 }])))
-    ).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-    sb.saveRankSnapshot(counted).catch(err => console.warn("Rank snapshot save failed:", err));
-  }, [loadingData]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Snapshot is saved inside handleSubmit (before a new entry is inserted),
+  // so arrows reflect the change caused by the most recent log and persist
+  // until the next dog is logged. We do NOT save here on page load.
 
   // ── Monthly battle ────────────────────────────────────────────────────────
   // All month logic uses Pacific Time so "end of month" is the same instant
@@ -671,6 +659,20 @@ export default function HotdogTracker() {
       });
       setUploadProgress(100);
       setVideoState("filled");
+
+      // ── Snapshot current standings before inserting the new entry ────────
+      // This freezes the "before" state so arrows persist until the next log.
+      const currentStandings = Object.values(
+        entries.reduce((acc, e) => {
+          const k = e.name.toLowerCase();
+          if (!acc[k]) acc[k] = { name: e.name, count: 0 };
+          acc[k].count += e.count;
+          return acc;
+        }, Object.fromEntries(users.map(u => [u.toLowerCase(), { name: u, count: 0 }])))
+      ).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+      sb.saveRankSnapshot(currentStandings).catch(err =>
+        console.warn("Rank snapshot save failed (non-fatal):", err)
+      );
 
       // ── Save entry ───────────────────────────────────────────────────────
       const entry = {
