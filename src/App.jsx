@@ -170,11 +170,45 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
-// ── Streak helpers ────────────────────────────────────────────────────────────
+// ── Time zone ─────────────────────────────────────────────────────────────────
+// All calendar-day logic uses Pacific Time so every contestant plays by the
+// same clock regardless of where they are in the country.
 
+const TZ = "America/Los_Angeles";
+
+// "YYYY-MM-DD" in Pacific Time
 function toDateStr(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return d.toLocaleDateString("en-CA", { timeZone: TZ });
 }
+
+// How many ms Pacific Time is behind UTC at the given instant.
+// Uses Intl.DateTimeFormat.formatToParts — works in all modern browsers / Node 14+.
+function getPacificOffsetMs(date) {
+  const fmt = (tz) =>
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+      hour12: false,
+    }).formatToParts(date);
+
+  const toMs = (parts) => {
+    const get = (type) => parseInt(parts.find((p) => p.type === type).value);
+    return Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  };
+
+  return toMs(fmt("UTC")) - toMs(fmt(TZ)); // e.g. 25_200_000 for PDT (UTC-7)
+}
+
+// UTC timestamp for a date/time expressed in Pacific Time.
+// Accurate everywhere except within the ambiguous hour of a DST fall-back,
+// which never overlaps with month-boundary calculations.
+function ptToUTC(y, m, d, h, min, s) {
+  const candidate = new Date(Date.UTC(y, m - 1, d, h, min, s));
+  return candidate.getTime() + getPacificOffsetMs(candidate);
+}
+
+// ── Streak helpers ────────────────────────────────────────────────────────────
 
 // Returns { name, streak, active } for the person with the longest all-time
 // streak of consecutive calendar days with at least one logged entry.
@@ -245,10 +279,13 @@ function monthStrToName(monthStr) {
   return MONTH_NAMES[month - 1];
 }
 
-// Countdown from now to end of the given month (local time)
+// Countdown to 23:59:59 Pacific Time on the last day of the current Pacific month
 function getCountdown(now) {
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-  const diff = end - now;
+  const pacificStr = toDateStr(now); // "YYYY-MM-DD" in PT
+  const [year, month] = pacificStr.split("-").map(Number);
+  const lastDay = new Date(year, month, 0).getDate(); // last day of this Pacific month
+  const endMs = ptToUTC(year, month, lastDay, 23, 59, 59);
+  const diff = endMs - now.getTime();
   if (diff <= 0) return "Ended";
   const days    = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours   = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -393,16 +430,21 @@ export default function HotdogTracker() {
   }, [loadingData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Monthly battle ────────────────────────────────────────────────────────
-  // Current month string e.g. "2026-04"
+  // All month logic uses Pacific Time so "end of month" is the same instant
+  // for everyone regardless of their device's local clock.
   const nowDate = new Date();
-  const currentMonthStr = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, "0")}`;
-  const currentMonthName = MONTH_NAMES[nowDate.getMonth()];
+  const pacificDateStr  = toDateStr(nowDate);                          // "2026-04-17"
+  const pacificYear     = parseInt(pacificDateStr.slice(0, 4));
+  const pacificMonth    = parseInt(pacificDateStr.slice(5, 7));
+  const currentMonthStr = pacificDateStr.slice(0, 7);                  // "2026-04"
+  const currentMonthName = MONTH_NAMES[pacificMonth - 1];
   // Only show a battle card up through April 2027
   const showBattleCard = currentMonthStr <= "2027-04";
 
-  // Entries logged in the current calendar month
-  const monthStart = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1).getTime();
-  const monthEnd   = new Date(nowDate.getFullYear(), nowDate.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+  // Pacific month boundaries as UTC timestamps
+  const lastDayOfMonth = new Date(pacificYear, pacificMonth, 0).getDate();
+  const monthStart = ptToUTC(pacificYear, pacificMonth, 1, 0, 0, 0);
+  const monthEnd   = ptToUTC(pacificYear, pacificMonth, lastDayOfMonth, 23, 59, 59);
   const battleEntries = entries.filter(e => e.timestamp >= monthStart && e.timestamp <= monthEnd);
 
   // Aggregate into battle standings — top 3, tie-break: most dogs, then earliest last entry

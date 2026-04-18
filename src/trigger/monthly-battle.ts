@@ -10,14 +10,39 @@ const sbHeaders = {
   Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Pacific Time helpers ──────────────────────────────────────────────────────
+// All month boundaries match the frontend: Pacific Time, not UTC.
 
-function monthStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+const TZ = "America/Los_Angeles";
+
+// "YYYY-MM-DD" in Pacific Time
+function toDateStrPT(d: Date): string {
+  return d.toLocaleDateString("en-CA", { timeZone: TZ });
 }
 
-function monthLabel(d: Date): string {
-  return d.toLocaleString("en-US", { month: "long" });
+// How many ms Pacific Time is behind UTC at a given instant
+function getPacificOffsetMs(date: Date): number {
+  const fmt = (tz: string) =>
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+      hour12: false,
+    }).formatToParts(date);
+
+  const toMs = (parts: Intl.DateTimeFormatPart[]) => {
+    const get = (type: string) =>
+      parseInt(parts.find((p) => p.type === type)!.value);
+    return Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  };
+
+  return toMs(fmt("UTC")) - toMs(fmt(TZ));
+}
+
+// UTC timestamp for a date/time expressed in Pacific Time
+function ptToUTC(y: number, m: number, d: number, h: number, min: number, s: number): number {
+  const candidate = new Date(Date.UTC(y, m - 1, d, h, min, s));
+  return candidate.getTime() + getPacificOffsetMs(candidate);
 }
 
 // ── Task ──────────────────────────────────────────────────────────────────────
@@ -25,41 +50,40 @@ function monthLabel(d: Date): string {
 export const monthlyBattleClose = schedules.task({
   id: "monthly-battle-close",
 
-  // 00:05 UTC on the 1st of every month — gives a 5-minute buffer after midnight
-  cron: "5 0 1 * *",
+  // 08:10 UTC on the 1st of every month.
+  // PST = UTC-8: Pacific midnight = 08:00 UTC → we fire 10 min after.
+  // PDT = UTC-7: Pacific midnight = 07:00 UTC → we fire 1h10m after.
+  // Either way the Pacific month has definitively ended before this runs.
+  cron: "10 8 1 * *",
 
   run: async (payload) => {
-    const now = payload.timestamp; // Date object (scheduled time)
+    const now = payload.timestamp; // Date object (scheduled time, UTC)
 
-    // The last battle is April 2027; its champion is crowned May 1, 2027.
-    // After that, nothing to do.
-    const isAfterLastCrowning =
-      now.getFullYear() > 2027 ||
-      (now.getFullYear() === 2027 && now.getMonth() >= 4); // May = index 4
+    // Determine the current date in Pacific Time.
+    // At 08:10 UTC on the 1st, Pacific time is just past midnight on the 1st.
+    const pacificStr = toDateStrPT(now);                        // e.g. "2026-05-01"
+    const [ptYear, ptMonth] = pacificStr.split("-").map(Number);
 
-    if (isAfterLastCrowning) {
+    // The month we're crowning = previous Pacific month
+    const prevPtMonth = ptMonth === 1 ? 12 : ptMonth - 1;
+    const prevPtYear  = ptMonth === 1 ? ptYear - 1 : ptYear;
+
+    // Last battle is April 2027 — skip anything after that
+    if (prevPtYear > 2027 || (prevPtYear === 2027 && prevPtMonth > 4)) {
       logger.log("All battles complete — no more champions to crown.");
       return { skipped: true, reason: "past final battle (April 2027)" };
     }
 
-    // Previous month (the one that just ended)
-    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const month = monthStr(prevMonth);
-    const monthName = monthLabel(prevMonth);
+    const month     = `${prevPtYear}-${String(prevPtMonth).padStart(2, "0")}`;
+    const monthName = new Date(prevPtYear, prevPtMonth - 1, 1)
+      .toLocaleString("en-US", { month: "long" });
 
-    const monthStartMs = new Date(
-      prevMonth.getFullYear(),
-      prevMonth.getMonth(),
-      1
-    ).getTime();
-    const monthEndMs = new Date(
-      prevMonth.getFullYear(),
-      prevMonth.getMonth() + 1,
-      0,
-      23, 59, 59, 999
-    ).getTime();
+    // Pacific month boundaries as UTC timestamps (matches frontend filtering)
+    const lastDay    = new Date(prevPtYear, prevPtMonth, 0).getDate();
+    const monthStartMs = ptToUTC(prevPtYear, prevPtMonth, 1, 0, 0, 0);
+    const monthEndMs   = ptToUTC(prevPtYear, prevPtMonth, lastDay, 23, 59, 59);
 
-    logger.log(`Closing battle for ${monthName} ${prevMonth.getFullYear()}`, {
+    logger.log(`Closing battle for ${monthName} ${prevPtYear}`, {
       month,
       monthStartMs,
       monthEndMs,

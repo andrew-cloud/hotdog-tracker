@@ -267,6 +267,44 @@ body {
   font-variant-numeric: tabular-nums;  /* prevents width jumping as digits change */
 }
 
+/* ── Streak card ──────────────────────────────────────────────────────── */
+.ds-streak-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--component\/card-header-border, #2e2e40);
+  background: var(--component\/card-header-bg, #1e1e28);
+}
+
+.ds-streak-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.ds-streak-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text\/primary, #f0ede6);
+}
+
+.ds-streak-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.ds-streak-active {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--text\/secondary, #9e9bb4);
+}
+
 /* ── Champion card (past month winners) ───────────────────────────────── */
 .ds-champion-header {
   display: flex;
