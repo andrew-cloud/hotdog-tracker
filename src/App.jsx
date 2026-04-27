@@ -136,13 +136,16 @@ const sb = {
 const MAC_MINI_URL = window.__UPLOAD_SERVER_URL__ || "https://uploads.andrewcloud.com";
 
 async function uploadVideoViaMacMini(id, file, onProgress) {
-  const ext  = file.name.split(".").pop() || "mp4";
-  const path = `${id}.mp4`;
+  // ── Step 1: Get a signed Supabase upload URL from the Mac Mini ────────────
+  // This is a tiny request that goes through the Cloudflare tunnel.
+  const urlRes = await fetch(`${MAC_MINI_URL}/upload-url?id=${encodeURIComponent(id)}`);
+  if (!urlRes.ok) throw new Error(`Could not get upload URL: ${urlRes.status}`);
+  const { signedURL, storagePath } = await urlRes.json();
 
-  return new Promise((resolve, reject) => {
-    const form = new FormData();
-    form.append("file", file, file.name);
-
+  // ── Step 2: Upload the raw video directly to Supabase ─────────────────────
+  // Goes straight to Supabase — completely bypasses the Cloudflare tunnel and
+  // its request-body size limit. Progress events work normally via XHR.
+  await new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 
     xhr.upload.addEventListener("progress", (e) => {
@@ -151,23 +154,31 @@ async function uploadVideoViaMacMini(id, file, onProgress) {
 
     xhr.addEventListener("load", () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const data = JSON.parse(xhr.responseText);
-          resolve(data.videoPath || path);
-        } catch {
-          resolve(path);
-        }
+        resolve();
       } else {
         reject(new Error(`Upload failed: ${xhr.status} — ${xhr.responseText}`));
       }
     });
 
-    xhr.addEventListener("error", () => reject(new Error("Network error — is the Mac Mini server running?")));
+    xhr.addEventListener("error", () => reject(new Error("Network error during upload to Supabase")));
     xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
 
-    xhr.open("POST", `${MAC_MINI_URL}/upload?id=${encodeURIComponent(id)}`);
-    xhr.send(form);
+    xhr.open("PUT", signedURL);
+    xhr.setRequestHeader("Content-Type", "video/mp4");
+    xhr.send(file);
   });
+
+  // ── Step 3: Tell the Mac Mini to trigger GIF conversion ───────────────────
+  // Another tiny request — no file body. The Mac Mini fires Trigger.dev, which
+  // will compress the raw video and produce the GIF.
+  const processRes = await fetch(`${MAC_MINI_URL}/process`, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify({ id, storagePath }),
+  });
+  if (!processRes.ok) throw new Error(`Process trigger failed: ${processRes.status}`);
+
+  return storagePath;
 }
 
 
