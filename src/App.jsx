@@ -1,11 +1,16 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { createClient } from "@supabase/supabase-js";
 import "./App.css";
 import { Avatar, Button, Input, Stepper, Textarea, UploadField, GifTile, Toast, Divider, TabBar, Select } from "./design-system";
 
-// ── Supabase client (unchanged) ───────────────────────────────────────────────
+// ── Supabase ──────────────────────────────────────────────────────────────────
 
 const SUPABASE_URL = "https://lrjydzmsqkfmenrtoklv.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxyanlkem1zcWtmbWVucnRva2x2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTE5NjcsImV4cCI6MjA5MDAyNzk2N30.CzW0n8xunV9gholcPDYq-V7yxdtH29ud9piUyhEwxoY";
+
+// Realtime client — only used for WebSocket subscriptions.
+// All REST calls continue to use the plain fetch-based `sb` object below.
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/trigger-gif`;
 
 const sb = {
@@ -360,7 +365,6 @@ export default function HotdogTracker() {
   const [toast, setToast] = useState(null);
   const [monthlyChampions, setMonthlyChampions] = useState([]);
 
-  const pollRef          = useRef(null);
   const topSentinelRef   = useRef(null);
   const bottomSentinelRef = useRef(null);
   const scrollAnchor     = useRef(null); // { id, top } — set before each window shift
@@ -393,22 +397,41 @@ export default function HotdogTracker() {
     })();
   }, []);
 
+  // ── Realtime: GIF-ready notifications ────────────────────────────────────
+  // Supabase pushes an UPDATE event the moment gif_url is written to the DB.
+  // One persistent WebSocket replaces the old 5-second polling interval.
+  // Requires Realtime to be enabled on the `entries` table in Supabase dashboard:
+  //   Database → Replication → Tables → entries → toggle on
   useEffect(() => {
-    if (processingIds.size === 0) return;
-    pollRef.current = setInterval(async () => {
-      for (const id of processingIds) {
-        try {
-          const entry = await sb.getEntry(id);
-          if (entry?.gif_url) {
-            setEntries(prev => prev.map(e => e.id === id ? { ...e, gif_url: entry.gif_url } : e));
-            setProcessingIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+    const channel = supabase
+      .channel("gif-ready")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "entries" },
+        (payload) => {
+          const updated = payload.new;
+          if (!updated.gif_url) return;
+          // Use functional updaters so we never close over stale state
+          setEntries((prev) => {
+            const existing = prev.find((e) => e.id === updated.id);
+            if (!existing || existing.gif_url) return prev; // already up to date
             showToast("🎉 GIF is ready in the gallery!");
-          }
-        } catch {}
-      }
-    }, 5000);
-    return () => clearInterval(pollRef.current);
-  }, [processingIds]);
+            return prev.map((e) =>
+              e.id === updated.id ? { ...e, gif_url: updated.gif_url } : e
+            );
+          });
+          setProcessingIds((prev) => {
+            if (!prev.has(updated.id)) return prev;
+            const next = new Set(prev);
+            next.delete(updated.id);
+            return next;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Gallery window (derived early so effects can reference gallery) ──────
   const gallery = entries.filter(e => e.video_path || e.gif_url);
