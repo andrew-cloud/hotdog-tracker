@@ -71,8 +71,8 @@ export const convertVideoToGif = task({
   // 1 hour — long clips (6–10 min) take time to compress + convert to GIF
   maxDuration: 3600,
 
-  // Large machine (8GB RAM) — needed for large GIF palette generation on long clips
-  machine: "large-1x",
+  // Large-2x machine (8 vCPU, 16GB RAM) — faster palette generation on long clips
+  machine: "large-2x",
 
   run: async (payload: { entryId: string; videoPath: string }) => {
     const { entryId, videoPath } = payload;
