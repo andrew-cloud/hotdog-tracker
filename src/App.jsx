@@ -1,6 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
-import * as tus from "tus-js-client";
 import "./App.css";
 import { Avatar, Button, Input, Stepper, Textarea, UploadField, GifTile, Toast, Divider, TabBar, Select } from "./design-system";
 
@@ -137,46 +136,37 @@ const sb = {
 const MAC_MINI_URL = window.__UPLOAD_SERVER_URL__ || "https://uploads.andrewcloud.com";
 
 async function uploadVideoViaMacMini(id, file, onProgress) {
+  const CHUNK_SIZE  = 5 * 1024 * 1024; // 5 MB — well under Cloudflare's per-request limit
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
   const storagePath = `${id}.mp4`;
 
-  // ── Step 1: Upload directly to Supabase via TUS ───────────────────────────
-  // TUS uploads go straight to Supabase in 6MB chunks — bypassing the
-  // Cloudflare Tunnel entirely. Built-in retry on each chunk means large
-  // files survive flaky connections without starting over.
-  await new Promise((resolve, reject) => {
-    const upload = new tus.Upload(file, {
-      endpoint:   `${SUPABASE_URL}/storage/v1/upload/resumable`,
-      retryDelays: [0, 3000, 5000, 10000, 20000],
-      headers: {
-        authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        apikey:        SUPABASE_ANON_KEY,
-      },
-      uploadDataDuringCreation: true,
-      removeFingerprintOnSuccess: true,
-      metadata: {
-        bucketName:  "videos",
-        objectName:  storagePath,
-        contentType: file.type || "video/mp4",
-        cacheControl: "3600",
-      },
-      chunkSize: 6 * 1024 * 1024, // 6 MB chunks
-      onError:    reject,
-      onProgress: (bytesUploaded, bytesTotal) => {
-        onProgress(Math.round((bytesUploaded / bytesTotal) * 100));
-      },
-      onSuccess: resolve,
-    });
-    upload.start();
-  });
+  // ── Send file in 5 MB slices ──────────────────────────────────────────────
+  // Each chunk is a separate POST — small enough to pass through Cloudflare.
+  // The Mac Mini reassembles, compresses with FFmpeg, then uploads to Supabase.
+  for (let i = 0; i < totalChunks; i++) {
+    const start = i * CHUNK_SIZE;
+    const chunk = file.slice(start, Math.min(start + CHUNK_SIZE, file.size));
 
-  // ── Step 2: Tell the Mac Mini to trigger GIF conversion ───────────────────
-  // Tiny JSON request — no file body, no Cloudflare size issue.
-  const processRes = await fetch(`${MAC_MINI_URL}/process`, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify({ id, storagePath }),
-  });
-  if (!processRes.ok) throw new Error(`Process trigger failed: ${processRes.status}`);
+    const form = new FormData();
+    form.append("chunk", chunk, file.name);
+    form.append("index", String(i));
+    form.append("total", String(totalChunks));
+
+    const res = await fetch(
+      `${MAC_MINI_URL}/upload-chunk?id=${encodeURIComponent(id)}`,
+      { method: "POST", body: form }
+    );
+    if (!res.ok) throw new Error(`Chunk ${i + 1}/${totalChunks} failed: ${res.status}`);
+
+    onProgress(Math.round(((i + 1) / totalChunks) * 100));
+  }
+
+  // ── Tell the Mac Mini to assemble + compress + trigger GIF ────────────────
+  const finalRes = await fetch(
+    `${MAC_MINI_URL}/upload-finalize?id=${encodeURIComponent(id)}`,
+    { method: "POST" }
+  );
+  if (!finalRes.ok) throw new Error(`Finalize failed: ${finalRes.status}`);
 
   return storagePath;
 }
