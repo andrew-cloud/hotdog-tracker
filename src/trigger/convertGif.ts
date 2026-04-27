@@ -96,22 +96,18 @@ export const convertVideoToGif = task({
       //
       // Filter chain:
       //   setpts=0.2*PTS        → 5x speed (presentation timestamps ÷ 5)
-      //   scale=480:-1          → 480px wide, height auto (keeps aspect ratio)
-      //   flags=lanczos         → high-quality downscale
-      //   fps=12                → 12fps output (smooth at 5x)
+      //   scale=320:-1          → 320px wide (down from 360) — fewer pixels = faster palette gen
+      //   fps=4                 → 4fps (unchanged — already minimal)
       //   split[s0][s1]         → duplicate stream for palette pass
-      //   palettegen            → build optimised 128-colour palette
-      //     max_colors=128      → half the 256 max — smaller GIF
+      //   palettegen            → build optimised palette
+      //     max_colors=32       → down from 64 — halves palette work, visible but acceptable
       //     stats_mode=diff     → palette built from frame differences (better for video)
       //   paletteuse            → apply palette with dithering
       //     dither=bayer        → ordered dither (fast, small file)
-      //     bayer_scale=5       → dither scale (1–5, higher = less banding)
+      //     bayer_scale=3       → dither scale
       //     diff_mode=rectangle → only re-encode changed regions per frame
-      //
-      // Result: a 10-minute video becomes a ~2-minute GIF at 5x,
-      // typically 20–80 MB depending on content complexity.
 
-      logger.log("Converting to GIF (5x speed, 4fps)...");
+      logger.log("Converting to GIF (5x speed, 4fps, 320px, 32 colors)...");
 
       await new Promise<void>((resolve, reject) => {
         ffmpeg(tmpVideo)
@@ -119,11 +115,11 @@ export const convertVideoToGif = task({
           .outputOptions([
             "-vf",
             [
-              "setpts=0.2*PTS",          // 5x speed
-              "scale=360:-1:flags=lanczos",
-              "fps=4",                   // 4fps
+              "setpts=0.2*PTS",
+              "scale=320:-1:flags=lanczos",
+              "fps=4",
               "split[s0][s1]",
-              "[s0]palettegen=max_colors=64:stats_mode=diff[p]",
+              "[s0]palettegen=max_colors=32:stats_mode=diff[p]",
               "[s1][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle",
             ].join(","),
             "-loop", "0",
