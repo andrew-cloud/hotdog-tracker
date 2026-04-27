@@ -1,5 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
+import * as tus from "tus-js-client";
 import "./App.css";
 import { Avatar, Button, Input, Stepper, Textarea, UploadField, GifTile, Toast, Divider, TabBar, Select } from "./design-system";
 
@@ -136,41 +137,40 @@ const sb = {
 const MAC_MINI_URL = window.__UPLOAD_SERVER_URL__ || "https://uploads.andrewcloud.com";
 
 async function uploadVideoViaMacMini(id, file, onProgress) {
-  // ── Step 1: Get a signed Supabase upload URL from the Mac Mini ────────────
-  // This is a tiny request that goes through the Cloudflare tunnel.
-  const urlRes = await fetch(`${MAC_MINI_URL}/upload-url?id=${encodeURIComponent(id)}`);
-  if (!urlRes.ok) throw new Error(`Could not get upload URL: ${urlRes.status}`);
-  const { signedURL, storagePath } = await urlRes.json();
+  const storagePath = `${id}.mp4`;
 
-  // ── Step 2: Upload the raw video directly to Supabase ─────────────────────
-  // Goes straight to Supabase — completely bypasses the Cloudflare tunnel and
-  // its request-body size limit. Progress events work normally via XHR.
+  // ── Step 1: Upload directly to Supabase via TUS ───────────────────────────
+  // TUS uploads go straight to Supabase in 6MB chunks — bypassing the
+  // Cloudflare Tunnel entirely. Built-in retry on each chunk means large
+  // files survive flaky connections without starting over.
   await new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-
-    xhr.upload.addEventListener("progress", (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    const upload = new tus.Upload(file, {
+      endpoint:   `${SUPABASE_URL}/storage/v1/upload/resumable`,
+      retryDelays: [0, 3000, 5000, 10000, 20000],
+      headers: {
+        authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        apikey:        SUPABASE_ANON_KEY,
+      },
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      metadata: {
+        bucketName:  "videos",
+        objectName:  storagePath,
+        contentType: file.type || "video/mp4",
+        cacheControl: "3600",
+      },
+      chunkSize: 6 * 1024 * 1024, // 6 MB chunks
+      onError:    reject,
+      onProgress: (bytesUploaded, bytesTotal) => {
+        onProgress(Math.round((bytesUploaded / bytesTotal) * 100));
+      },
+      onSuccess: resolve,
     });
-
-    xhr.addEventListener("load", () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve();
-      } else {
-        reject(new Error(`Upload failed: ${xhr.status} — ${xhr.responseText}`));
-      }
-    });
-
-    xhr.addEventListener("error", () => reject(new Error("Network error during upload to Supabase")));
-    xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
-
-    xhr.open("PUT", signedURL);
-    xhr.setRequestHeader("Content-Type", "video/mp4");
-    xhr.send(file);
+    upload.start();
   });
 
-  // ── Step 3: Tell the Mac Mini to trigger GIF conversion ───────────────────
-  // Another tiny request — no file body. The Mac Mini fires Trigger.dev, which
-  // will compress the raw video and produce the GIF.
+  // ── Step 2: Tell the Mac Mini to trigger GIF conversion ───────────────────
+  // Tiny JSON request — no file body, no Cloudflare size issue.
   const processRes = await fetch(`${MAC_MINI_URL}/process`, {
     method:  "POST",
     headers: { "Content-Type": "application/json" },
