@@ -15,29 +15,6 @@ const sbHeaders = {
   Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
 };
 
-async function compressToH264(inputPath: string, outputPath: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
-      .inputOptions([
-        "-t",    "600",    // cap at 10 minutes
-        "-map",  "0:v:0", // select primary video stream (strips Dolby Vision metadata)
-      ])
-      .outputOptions([
-        "-vf",     "scale='min(720,iw)':-2",
-        "-c:v",    "libx264",
-        "-crf",    "28",
-        "-preset", "fast",
-        "-an",
-        "-movflags", "+faststart",
-      ])
-      .output(outputPath)
-      .on("progress", (p) => logger.log("Compression progress", { timemark: p.timemark }))
-      .on("end", resolve)
-      .on("error", (err) => reject(new Error(`Compression error: ${err.message}`)))
-      .run();
-  });
-}
-
 async function downloadFile(bucket: string, path: string, destPath: string) {
   const res = await fetch(
     `${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`,
@@ -102,27 +79,20 @@ export const convertVideoToGif = task({
 
     logger.log("Starting GIF conversion", { entryId, videoPath });
 
-    const tmpVideo      = join(tmpdir(), `${entryId}-input.mp4`);
-    const tmpCompressed = join(tmpdir(), `${entryId}-compressed.mp4`);
-    const tmpGif        = join(tmpdir(), `${entryId}-output.gif`);
+    const tmpVideo = join(tmpdir(), `${entryId}-input.mp4`);
+    const tmpGif   = join(tmpdir(), `${entryId}-output.gif`);
 
     try {
       // ── 1. Download video from Supabase Storage ──────────────────────────
+      // The Mac Mini already compressed to H.264 before uploading, so we can
+      // go straight to GIF conversion without a second compression pass.
       logger.log("Downloading video...");
       await downloadFile("videos", videoPath, tmpVideo);
 
       const { size: videoBytes } = await stat(tmpVideo);
       logger.log("Download complete", { sizeMB: (videoBytes / 1024 / 1024).toFixed(1) });
 
-      // ── 2. Compress to H.264 ─────────────────────────────────────────────
-      // Raw uploads (HEVC, Dolby Vision, etc.) are normalised to H.264 here
-      // so the GIF filter chain works on a known-good codec.
-      logger.log("Compressing to H.264...");
-      await compressToH264(tmpVideo, tmpCompressed);
-      const { size: compressedBytes } = await stat(tmpCompressed);
-      logger.log("Compression complete", { sizeMB: (compressedBytes / 1024 / 1024).toFixed(1) });
-
-      // ── 3. Convert to GIF ────────────────────────────────────────────────
+      // ── 2. Convert to GIF ────────────────────────────────────────────────
       //
       // Filter chain:
       //   setpts=0.2*PTS        → 5x speed (presentation timestamps ÷ 5)
@@ -144,7 +114,7 @@ export const convertVideoToGif = task({
       logger.log("Converting to GIF (5x speed, 4fps)...");
 
       await new Promise<void>((resolve, reject) => {
-        ffmpeg(tmpCompressed)
+        ffmpeg(tmpVideo)
           .inputOptions(["-t", "600"])
           .outputOptions([
             "-vf",
@@ -196,7 +166,6 @@ export const convertVideoToGif = task({
     } finally {
       // Always clean up temp files
       await unlink(tmpVideo).catch(() => {});
-      await unlink(tmpCompressed).catch(() => {});
       await unlink(tmpGif).catch(() => {});
     }
   },
