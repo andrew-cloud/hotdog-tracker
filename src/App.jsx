@@ -709,13 +709,10 @@ export default function HotdogTracker() {
       };
       await sb.insertEntry(entry);
 
-      // ── Trigger GIF conversion (Mac Mini server already triggered this,
-      //    but trigger-gif is idempotent so calling it again is safe) ───────
-      try {
-        await sb.triggerGifConversion(id, videoPath);
-      } catch (triggerErr) {
-        console.warn("GIF trigger failed (non-fatal):", triggerErr.message);
-      }
+      // GIF conversion is triggered by the Mac Mini server after it finishes
+      // compressing and uploading the video. We no longer trigger it here to
+      // avoid a race condition where Trigger.dev starts before the video is
+      // in Supabase. The Realtime subscription notifies us when the GIF is ready.
 
       setProcessingIds(prev => new Set([...prev, id]));
       setEntries(prev => [entry, ...prev]);

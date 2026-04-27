@@ -68,11 +68,11 @@ async function updateEntryGifUrl(entryId: string, gifUrl: string) {
 export const convertVideoToGif = task({
   id: "convert-video-to-gif",
 
-  // 15 minutes — enough headroom for a 10-minute video at 5x speed
-  maxDuration: 900,
+  // 1 hour — long clips (6–10 min) take time to compress + convert to GIF
+  maxDuration: 3600,
 
-  // Medium machine (2GB RAM) — GIF conversion is memory-intensive
-  machine: "medium-1x",
+  // Large machine (8GB RAM) — needed for large GIF palette generation on long clips
+  machine: "large-1x",
 
   run: async (payload: { entryId: string; videoPath: string }) => {
     const { entryId, videoPath } = payload;
@@ -113,8 +113,8 @@ export const convertVideoToGif = task({
 
       await new Promise<void>((resolve, reject) => {
         ffmpeg(tmpVideo)
-          // Cap input to 10 minutes as a safety guard
-          .inputOptions(["-t", "600"])
+          // Cap input to 10 minutes; explicit stream select handles Dolby Vision metadata
+          .inputOptions(["-t", "600", "-map", "0:v:0"])
           .outputOptions([
             "-vf",
             [
