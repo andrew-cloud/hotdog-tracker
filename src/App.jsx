@@ -810,7 +810,7 @@ export default function HotdogTracker() {
                           label="Your name"
                           placeholder="Enter your name"
                           value={customName}
-                          onChange={e => { setCustomName(e.target.value.replace(/[^a-zA-Z0-9 ]/g, "")); setLoginError(""); }}
+                          onChange={e => { setCustomName(e.target.value); setLoginError(""); }}
                           state={loginError && !loginPin ? "error" : "default"}
                           hint={loginError && !loginPin ? loginError : undefined}
                           showHint={!!(loginError && !loginPin)}
