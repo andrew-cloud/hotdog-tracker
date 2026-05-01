@@ -913,7 +913,7 @@ export default function HotdogTracker() {
                       <span className="ds-card-title">Hot dogs consumed</span>
                     </div>
                     <div className="ds-card-body">
-                      <Stepper value={count} min={1} max={99} onChange={setCount} />
+                      <Stepper value={count} min={1} max={10} onChange={setCount} />
                     </div>
                   </div>
 
