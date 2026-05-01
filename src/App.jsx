@@ -604,6 +604,10 @@ export default function HotdogTracker() {
       setLoginError("Please enter your name");
       return;
     }
+    if (isNewUser && !/^[a-zA-Z0-9 ]+$/.test(activeName)) {
+      setLoginError("Name can only contain letters, numbers, and spaces");
+      return;
+    }
     if (!loginPin || loginPin.length < 4) {
       setLoginError("Enter your 4-digit PIN");
       return;
@@ -806,7 +810,7 @@ export default function HotdogTracker() {
                           label="Your name"
                           placeholder="Enter your name"
                           value={customName}
-                          onChange={e => { setCustomName(e.target.value); setLoginError(""); }}
+                          onChange={e => { setCustomName(e.target.value.replace(/[^a-zA-Z0-9 ]/g, "")); setLoginError(""); }}
                           state={loginError && !loginPin ? "error" : "default"}
                           hint={loginError && !loginPin ? loginError : undefined}
                           showHint={!!(loginError && !loginPin)}
