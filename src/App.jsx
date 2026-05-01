@@ -319,8 +319,10 @@ const EMOJI_POOL = [
   "🦄","🐙","🦑","🦋","🐻","🦖","🐊","🦩","🐆","🦓",
 ];
 
-function pickEmoji() {
-  return EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)];
+function pickEmoji(usedEmojis = []) {
+  const available = EMOJI_POOL.filter(e => !usedEmojis.includes(e));
+  const pool = available.length > 0 ? available : EMOJI_POOL;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 // ── App ───────────────────────────────────────────────────────────────────────
@@ -627,7 +629,8 @@ export default function HotdogTracker() {
           setConfirming(false);
           return;
         }
-        const emoji = pickEmoji();
+        const usedEmojis = Object.values(avatarByName).filter(v => EMOJI_POOL.includes(v));
+        const emoji = pickEmoji(usedEmojis);
         await sb.createUser(activeName, loginPin, emoji);
         setUsers(prev => [...prev, activeName].sort());
         setAvatarByName(prev => ({ ...prev, [activeName]: emoji }));
