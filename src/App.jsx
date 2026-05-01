@@ -313,6 +313,28 @@ function formatDate(timestamp) {
 
 const NEW_USER_SENTINEL = "__new__";
 
+// Computes standings sorted by count desc, tiebroken by who reached that
+// count first (earliest timestamp of the entry that completed their total).
+function computeStandings(entries, users) {
+  const byUser = {};
+  for (const u of users) byUser[u.toLowerCase()] = { name: u, entries: [] };
+  for (const e of entries) {
+    const k = e.name.toLowerCase();
+    if (!byUser[k]) byUser[k] = { name: e.name, entries: [] };
+    byUser[k].entries.push(e);
+  }
+  return Object.values(byUser).map(({ name, entries: ents }) => {
+    const sorted = [...ents].sort((a, b) => a.timestamp - b.timestamp);
+    const total = sorted.reduce((s, e) => s + e.count, 0);
+    let cum = 0, reachedAt = Infinity;
+    for (const e of sorted) {
+      cum += e.count;
+      if (cum >= total) { reachedAt = e.timestamp; break; }
+    }
+    return { name, count: total, reachedAt };
+  }).sort((a, b) => b.count - a.count || a.reachedAt - b.reachedAt);
+}
+
 const EMOJI_POOL = [
   // Animals
   "🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🙈","🙉","🙊",
@@ -708,14 +730,7 @@ export default function HotdogTracker() {
 
       // ── Snapshot current standings before inserting the new entry ────────
       // This freezes the "before" state so arrows persist until the next log.
-      const currentStandings = Object.values(
-        entries.reduce((acc, e) => {
-          const k = e.name.toLowerCase();
-          if (!acc[k]) acc[k] = { name: e.name, count: 0 };
-          acc[k].count += e.count;
-          return acc;
-        }, Object.fromEntries(users.map(u => [u.toLowerCase(), { name: u, count: 0 }])))
-      ).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+      const currentStandings = computeStandings(entries, users);
       sb.saveRankSnapshot(currentStandings).catch(err =>
         console.warn("Rank snapshot save failed (non-fatal):", err)
       );
@@ -761,14 +776,7 @@ export default function HotdogTracker() {
 
   // ── Derived ───────────────────────────────────────────────────────────────
 
-  const standings = Object.values(
-    entries.reduce((acc, e) => {
-      const k = e.name.toLowerCase();
-      if (!acc[k]) acc[k] = { name: e.name, count: 0 };
-      acc[k].count += e.count;
-      return acc;
-    }, Object.fromEntries(users.map(u => [u.toLowerCase(), { name: u, count: 0 }])))
-  ).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  const standings = computeStandings(entries, users);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
