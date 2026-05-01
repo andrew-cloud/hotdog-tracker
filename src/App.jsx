@@ -691,6 +691,10 @@ export default function HotdogTracker() {
       showToast("Video proof is required! 📹", "error");
       return;
     }
+    if (mood === null) {
+      showToast("How did it feel? Pick an emoji first.", "error");
+      return;
+    }
     setSubmitting(true);
     setUploadProgress(0);
     try {
@@ -939,26 +943,7 @@ export default function HotdogTracker() {
 
                   <div className="ds-card">
                     <div className="ds-card-header">
-                      <span className="ds-card-title">Notes</span>
-                      <span className="ds-card-subtitle">
-                        Optional, but everyone loves a good story.
-                      </span>
-                    </div>
-                    <div className="ds-card-body">
-                      <Textarea
-                        value={notes}
-                        placeholder={`"So there I was, just me and the 7/11 employee..."`}
-                        onChange={e => setNotes(e.target.value)}
-                        maxLength={120}
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="ds-card">
-                    <div className="ds-card-header">
                       <span className="ds-card-title">How did it feel?</span>
-                      <span className="ds-card-subtitle">Optional</span>
                     </div>
                     <div className="ds-card-body">
                       <div className="ds-mood-picker">
@@ -983,12 +968,30 @@ export default function HotdogTracker() {
                     </div>
                   </div>
 
+                  <div className="ds-card">
+                    <div className="ds-card-header">
+                      <span className="ds-card-title">Notes</span>
+                      <span className="ds-card-subtitle">
+                        Optional, but everyone loves a good story.
+                      </span>
+                    </div>
+                    <div className="ds-card-body">
+                      <Textarea
+                        value={notes}
+                        placeholder={`"So there I was, just me and the 7/11 employee..."`}
+                        onChange={e => setNotes(e.target.value)}
+                        maxLength={120}
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                  </div>
+
                   <Button
                     buttonStyle="primary"
                     size="medium"
                     label={submitting ? "Logging…" : "Log it!"}
                     loading={submitting}
-                    disabled={submitting || !videoFile}
+                    disabled={submitting || !videoFile || mood === null}
                     onClick={handleSubmit}
                     style={{ width: "100%" }}
                   />
