@@ -367,7 +367,7 @@ export default function HotdogTracker() {
   // Log form state
   const [count, setCount] = useState(1);
   const [notes, setNotes] = useState("");
-  const [mood, setMood] = useState(null); // 1–5, null = not picked
+  const [mood, setMood] = useState(3); // 1–5, default neutral
   const [videoFile, setVideoFile] = useState(null);
   const [videoFileSize, setVideoFileSize] = useState("");
   const [videoState, setVideoState] = useState("default");
@@ -691,10 +691,6 @@ export default function HotdogTracker() {
       showToast("Video proof is required! 📹", "error");
       return;
     }
-    if (mood === null) {
-      showToast("How did it feel? Pick an emoji first.", "error");
-      return;
-    }
     setSubmitting(true);
     setUploadProgress(0);
     try {
@@ -748,7 +744,7 @@ export default function HotdogTracker() {
       // Navigate to gallery first, then show the toast there
       setCount(1);
       setNotes("");
-      setMood(null);
+      setMood(3);
       setVideoFile(null);
       setVideoFileSize("");
       setVideoState("default");
@@ -991,7 +987,7 @@ export default function HotdogTracker() {
                     size="medium"
                     label={submitting ? "Logging…" : "Log it!"}
                     loading={submitting}
-                    disabled={submitting || !videoFile || mood === null}
+                    disabled={submitting || !videoFile}
                     onClick={handleSubmit}
                     style={{ width: "100%" }}
                   />
