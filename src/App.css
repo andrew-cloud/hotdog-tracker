@@ -14,7 +14,7 @@ body {
 
 /* ── App shell ────────────────────────────────────────────────────────── */
 .app {
-  min-height: 100vh;
+  min-height: 100dvh;
   max-width: 520px;
   margin: 0 auto;
   display: flex;
@@ -52,7 +52,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px 0 48px;
+  padding: 16px 0 calc(48px + env(safe-area-inset-bottom));
 }
 
 /* ── DS Card (app-specific layout wrapper) ────────────────────────────── */
