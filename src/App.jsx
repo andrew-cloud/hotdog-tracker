@@ -964,13 +964,10 @@ export default function HotdogTracker() {
                   ) : standings.length === 0 ? (
                     <p className="ds-empty">No entries yet — be the first! 🌭</p>
                   ) : (() => {
-                    const leaderCount = standings[0].count;
                     return standings.map((p, i) => {
                       const rank = i + 1;
                       const prevRank = prevRankByName[p.name.toLowerCase()];
                       const posChange = prevRank !== undefined ? prevRank - rank : 0;
-                      const delta = p.count - leaderCount;
-                      const deltaLabel = delta === 0 ? "--" : `(${delta})`;
                       return (
                         <div key={p.name}>
                           {i > 0 && <Divider />}
@@ -984,10 +981,7 @@ export default function HotdogTracker() {
                               <Avatar name={p.name} src={avatarByName[p.name]} size="sm" />
                               <span className="ds-standings-name">{p.name}</span>
                             </div>
-                            <div className="ds-standings-right">
-                              <span className="ds-standings-delta">{deltaLabel}</span>
-                              <span className="ds-standings-count">{p.count}</span>
-                            </div>
+                            <span className="ds-standings-count">{p.count}</span>
                           </div>
                         </div>
                       );

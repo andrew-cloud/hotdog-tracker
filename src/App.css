@@ -184,30 +184,12 @@ body {
   min-width: 0;
 }
 
-/* Right side — delta + count on the same line */
-.ds-standings-right {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
 .ds-standings-count {
   font-family: 'Inter', sans-serif;
   font-size: 16px;
   font-weight: 600;
   line-height: 26px;
   color: #ffffff;
-}
-
-.ds-standings-delta {
-  font-family: 'Inter', sans-serif;
-  font-size: 13px;
-  font-weight: 400;
-  font-style: italic;
-  color: var(--text\/secondary, #9e9bb4);
 }
 
 /* ── Empty state ──────────────────────────────────────────────────────── */
