@@ -367,6 +367,7 @@ export default function HotdogTracker() {
   // Log form state
   const [count, setCount] = useState(1);
   const [notes, setNotes] = useState("");
+  const [mood, setMood] = useState(null); // 1–5, null = not picked
   const [videoFile, setVideoFile] = useState(null);
   const [videoFileSize, setVideoFileSize] = useState("");
   const [videoState, setVideoState] = useState("default");
@@ -728,6 +729,7 @@ export default function HotdogTracker() {
         gif_url: null,
         video_path: videoPath,
         notes: notes.trim() || null,
+        mood: mood ?? null,
       };
       await sb.insertEntry(entry);
 
@@ -742,6 +744,7 @@ export default function HotdogTracker() {
       // Navigate to gallery first, then show the toast there
       setCount(1);
       setNotes("");
+      setMood(null);
       setVideoFile(null);
       setVideoFileSize("");
       setVideoState("default");
@@ -949,6 +952,34 @@ export default function HotdogTracker() {
                         maxLength={120}
                         style={{ width: "100%" }}
                       />
+                    </div>
+                  </div>
+
+                  <div className="ds-card">
+                    <div className="ds-card-header">
+                      <span className="ds-card-title">How did it feel?</span>
+                      <span className="ds-card-subtitle">Optional</span>
+                    </div>
+                    <div className="ds-card-body">
+                      <div className="ds-mood-picker">
+                        {[
+                          { value: 1, emoji: "😫" },
+                          { value: 2, emoji: "😕" },
+                          { value: 3, emoji: "😐" },
+                          { value: 4, emoji: "🙂" },
+                          { value: 5, emoji: "😄" },
+                        ].map(({ value, emoji }) => (
+                          <button
+                            key={value}
+                            className={`ds-mood-btn${mood === value ? " ds-mood-btn--selected" : ""}`}
+                            onClick={() => setMood(prev => prev === value ? null : value)}
+                            type="button"
+                            aria-label={`Mood ${value} of 5`}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
 

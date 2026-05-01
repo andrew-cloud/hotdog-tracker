@@ -192,6 +192,37 @@ body {
   color: #ffffff;
 }
 
+/* ── Mood picker ──────────────────────────────────────────────────────── */
+.ds-mood-picker {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.ds-mood-btn {
+  flex: 1;
+  background: var(--component\/card-header-bg, #1e1e28);
+  border: 1.5px solid var(--border\/default, #2e2e40);
+  border-radius: 8px;
+  padding: 10px 4px;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+
+.ds-mood-btn:hover {
+  border-color: var(--accent, #e8a44a);
+  background: rgba(232, 164, 74, 0.08);
+}
+
+.ds-mood-btn--selected {
+  border-color: var(--accent, #e8a44a);
+  background: rgba(232, 164, 74, 0.15);
+  transform: scale(1.08);
+}
+
 /* ── Empty state ──────────────────────────────────────────────────────── */
 .ds-empty {
   font-family: 'Inter', sans-serif;
