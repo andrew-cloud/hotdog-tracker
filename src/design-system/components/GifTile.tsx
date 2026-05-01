@@ -19,12 +19,22 @@ export interface GifTileProps {
   date?:      string;
   /** Optional caption appended to the GIF */
   notes?:     string;
+  /** Mood rating 1–5 */
+  mood?:      number | null;
   /** Upload/processing progress 0–100 (used when state="loading") */
   progress?:  number;
   onClick?:   () => void;
   className?: string;
   style?:     React.CSSProperties;
 }
+
+const MOOD_EMOJI: Record<number, string> = {
+  1: "🤢",
+  2: "😕",
+  3: "😐",
+  4: "🙂",
+  5: "🤩",
+};
 
 // ── Loading State ─────────────────────────────────────
 
@@ -79,6 +89,7 @@ export default function GifTile({
   count     = 0,
   date,
   notes,
+  mood,
   progress = 0,
   onClick,
   className,
@@ -134,10 +145,20 @@ export default function GifTile({
         )}
         {isLoading && <LoadingContent progress={progress} />}
 
-        {/* Avatar — absolute, bottom-left */}
-        <div style={{ position: "absolute", left: "16px", bottom: "12px" }}>
-          <Avatar name={name} src={avatarUrl} size="sm" />
-        </div>
+        {/* Mood emoji — absolute, bottom-right */}
+        {!isLoading && mood != null && MOOD_EMOJI[mood] && (
+          <div style={{
+            position:     "absolute",
+            right:        "10px",
+            bottom:       "10px",
+            fontSize:     "28px",
+            lineHeight:   "1",
+            filter:       "drop-shadow(0 1px 3px rgba(0,0,0,0.6))",
+            userSelect:   "none",
+          }}>
+            {MOOD_EMOJI[mood]}
+          </div>
+        )}
       </div>
 
       {/* Divider */}
@@ -162,60 +183,63 @@ export default function GifTile({
         {/* Default: name+notes grouped at gap:0, then date below at 8px */}
         {!isLoading ? (
           <>
-            <div style={{ display: "flex", flexDirection: "column", gap: 0, width: "100%" }}>
-              {/* name (left) + count (right) */}
-              <div style={{
-                display:        "flex",
-                alignItems:     "center",
-                justifyContent: "space-between",
-                width:          "100%",
-                overflow:       "hidden",
-              }}>
-                <span style={{
-                  fontFamily:   "Inter, sans-serif",
-                  fontSize:     "18px",
-                  fontWeight:   600,
-                  lineHeight:   "26px",
-                  color:        "var(--text\\/primary, #f0ede6)",
-                  overflow:     "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace:   "nowrap",
-                  flex:         1,
-                  minWidth:     0,
-                }}>
-                  {name}
-                </span>
-                <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
+            {/* name + notes (left column) + count (right) */}
+            <div style={{
+              display:     "flex",
+              alignItems:  "flex-start",
+              width:       "100%",
+              gap:         "24px",
+            }}>
+              {/* Left column: avatar+name, then notes indented to username */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 0, flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", overflow: "hidden" }}>
+                  <Avatar name={name} src={avatarUrl} size="md" />
                   <span style={{
-                    fontFamily: "Inter, sans-serif",
-                    fontSize:   "16px",
-                    fontWeight: 600,
-                    lineHeight: "26px",
-                    color:      "var(--brand\\/amber, #e8a44a)",
-                    whiteSpace: "nowrap",
+                    fontFamily:   "Inter, sans-serif",
+                    fontSize:     "18px",
+                    fontWeight:   600,
+                    lineHeight:   "26px",
+                    color:        "var(--text\\/primary, #f0ede6)",
+                    overflow:     "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace:   "nowrap",
+                    flex:         1,
+                    minWidth:     0,
                   }}>
-                    +{count}
+                    {name}
                   </span>
-                  <span style={{ fontSize: "16px", lineHeight: "26px" }}>🌭</span>
                 </div>
+                {notes && (
+                  <span style={{
+                    fontFamily:  "Inter, sans-serif",
+                    fontSize:    "16px",
+                    fontWeight:  400,
+                    lineHeight:  "22px",
+                    color:       "var(--text\\/primary, #f0ede6)",
+                    paddingLeft: "40px", // 32px avatar + 8px gap
+                  }}>
+                    "{notes}"
+                  </span>
+                )}
               </div>
 
-              {/* notes — directly under name, no gap */}
-              {notes && (
+              {/* Right: count */}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "4px", flexShrink: 0 }}>
                 <span style={{
                   fontFamily: "Inter, sans-serif",
                   fontSize:   "16px",
-                  fontWeight: 400,
+                  fontWeight: 600,
                   lineHeight: "26px",
-                  color:      "var(--text\\/primary, #f0ede6)",
-                  width:      "100%",
+                  color:      "var(--brand\\/amber, #e8a44a)",
+                  whiteSpace: "nowrap",
                 }}>
-                  {notes}
+                  +{count}
                 </span>
-              )}
+                <span style={{ fontSize: "16px", lineHeight: "26px" }}>🌭</span>
+              </div>
             </div>
 
-            {/* date — 8px below the name/notes group */}
+            {/* date — 8px below the name/notes group, aligned to username */}
             {date && (
               <span style={{
                 fontFamily:   "Inter, sans-serif",
@@ -227,6 +251,7 @@ export default function GifTile({
                 textOverflow: "ellipsis",
                 whiteSpace:   "nowrap",
                 width:        "100%",
+                paddingLeft:  "40px", // 32px avatar + 8px gap
               }}>
                 {date}
               </span>
@@ -242,20 +267,23 @@ export default function GifTile({
               width:          "100%",
               overflow:       "hidden",
             }}>
-              <span style={{
-                fontFamily:   "Inter, sans-serif",
-                fontSize:     "18px",
-                fontWeight:   600,
-                lineHeight:   "26px",
-                color:        "var(--text\\/primary, #f0ede6)",
-                overflow:     "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace:   "nowrap",
-                flex:         1,
-                minWidth:     0,
-              }}>
-                {name}
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0, overflow: "hidden" }}>
+                <Avatar name={name} src={avatarUrl} size="md" />
+                <span style={{
+                  fontFamily:   "Inter, sans-serif",
+                  fontSize:     "18px",
+                  fontWeight:   600,
+                  lineHeight:   "26px",
+                  color:        "var(--text\\/primary, #f0ede6)",
+                  overflow:     "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace:   "nowrap",
+                  flex:         1,
+                  minWidth:     0,
+                }}>
+                  {name}
+                </span>
+              </div>
               <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
                 <span style={{
                   fontFamily: "Inter, sans-serif",

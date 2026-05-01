@@ -1150,6 +1150,7 @@ export default function HotdogTracker() {
                         count={e.count}
                         date={formatDate(e.timestamp)}
                         notes={e.notes ?? undefined}
+                        mood={e.mood ?? undefined}
                         progress={processingIds.has(e.id) ? 50 : undefined}
                         style={{ width: "100%" }}
                       />

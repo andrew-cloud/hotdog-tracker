@@ -22,6 +22,12 @@ export interface UploadFieldProps {
   onFile?:         (file: File) => void;
   className?:      string;
   style?:          React.CSSProperties;
+  /** Override the default-state primary label (default: "Tap to upload video") */
+  label?:          string;
+  /** Override the default-state sublabel (default: "MP4 or MOV · Max 1 GB") */
+  sublabel?:       string;
+  /** Icon shown in default/selected states — emoji string (default: "📹") */
+  icon?:           string;
 }
 
 // ── Token helpers ─────────────────────────────────────
@@ -64,7 +70,7 @@ const SUBLABEL_COLOR: Record<UploadFieldState, string> = {
 
 // ── Icon ──────────────────────────────────────────────
 
-function Icon({ state }: { state: UploadFieldState }) {
+function Icon({ state, icon = "📹" }: { state: UploadFieldState; icon?: string }) {
   if (state === "filled") {
     return (
       <div style={{
@@ -88,7 +94,7 @@ function Icon({ state }: { state: UploadFieldState }) {
     );
   }
   if (state === "selected") {
-    return <span style={{ fontSize: "28px", lineHeight: "32px", userSelect: "none" }}>📹</span>;
+    return <span style={{ fontSize: "28px", lineHeight: "32px", userSelect: "none" }}>{icon}</span>;
   }
   return (
     <span style={{
@@ -96,7 +102,7 @@ function Icon({ state }: { state: UploadFieldState }) {
       lineHeight: state === "uploading" ? "28px" : "32px",
       userSelect: "none",
     }}>
-      {state === "uploading" ? "⏳" : "📹"}
+      {state === "uploading" ? "⏳" : icon}
     </span>
   );
 }
@@ -113,6 +119,9 @@ export default function UploadField({
   onFile,
   className,
   style,
+  label:    defaultLabel    = "Tap to upload video",
+  sublabel: defaultSublabel = "MP4 or MOV · Max 1 GB",
+  icon      = "📹",
 }: UploadFieldProps) {
   const [internalState, setInternalState] = useState<UploadFieldState>("default");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -146,13 +155,13 @@ export default function UploadField({
     : state === "selected"  ? filename
     : state === "filled"    ? filename
     : state === "error"     ? "Upload failed"
-    : "Tap to upload video";
+    : defaultLabel;
 
   const sublabel = state === "uploading" ? `${progress}% — please wait`
     : state === "selected"  ? (filesize ? `${filesize} · Ready to upload` : "Ready to upload")
     : state === "filled"    ? (filesize ? `${filesize} · Uploaded` : "Uploaded")
     : state === "error"     ? errorMessage
-    : "MP4 or MOV · Max 1 GB";
+    : defaultSublabel;
 
   // Height: auto when a filename is shown so long names can wrap
   const hasFilename = state === "selected" || state === "filled";
@@ -201,7 +210,7 @@ export default function UploadField({
         gap:           "6px",
         width:         "100%",
       }}>
-        <Icon state={state} />
+        <Icon state={state} icon={icon} />
 
         {/* Primary label — wraps for long filenames */}
         <span style={{

@@ -34,30 +34,9 @@ body {
   font-family: 'Bungee', cursive;
   font-size: 30px;
   font-weight: 400;
+  color: #ffffff;
   margin: 0;
   letter-spacing: 0.02em;
-
-  /* Shimmer */
-  background: linear-gradient(
-    105deg,
-    #6b1117 0%,
-    #a02c32 30%,
-    #d4575f 48%,
-    #f0a0a4 52%,
-    #d4575f 56%,
-    #a02c32 70%,
-    #6b1117 100%
-  );
-  background-size: 250% 100%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  animation: shimmer 3.5s ease-in-out infinite;
-}
-
-@keyframes shimmer {
-  0%   { background-position: 200% center; }
-  100% { background-position: -200% center; }
 }
 
 /* ── Content area ─────────────────────────────────────────────────────── */
