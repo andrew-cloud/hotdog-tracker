@@ -753,7 +753,7 @@ export default function HotdogTracker() {
 
       {/* ── Header ── */}
       <div className="app-header">
-        <h1 className="app-title">Hotdog Slam</h1>
+        <h1 className="app-title">Year of the Dog</h1>
       </div>
 
       {/* ── Tab bar + content ── */}
