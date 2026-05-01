@@ -57,7 +57,7 @@ const sb = {
     return rows[0] || null;
   },
   async getUsers() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=name_key,display_name,avatar_url&order=display_name.asc`, { headers: this.headers });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=name_key,display_name,avatar_url,created_at&order=created_at.asc`, { headers: this.headers });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
@@ -315,7 +315,7 @@ const NEW_USER_SENTINEL = "__new__";
 
 // Computes standings sorted by count desc, tiebroken by who reached that
 // count first (earliest timestamp of the entry that completed their total).
-function computeStandings(entries, users) {
+function computeStandings(entries, users, userCreatedAt = {}) {
   const byUser = {};
   for (const u of users) byUser[u.toLowerCase()] = { name: u, entries: [] };
   for (const e of entries) {
@@ -326,10 +326,15 @@ function computeStandings(entries, users) {
   return Object.values(byUser).map(({ name, entries: ents }) => {
     const sorted = [...ents].sort((a, b) => a.timestamp - b.timestamp);
     const total = sorted.reduce((s, e) => s + e.count, 0);
-    let cum = 0, reachedAt = Infinity;
+    let cum = 0, reachedAt = null;
     for (const e of sorted) {
       cum += e.count;
       if (cum >= total) { reachedAt = e.timestamp; break; }
+    }
+    // Fall back to signup time so zero-count users sort by join order
+    if (reachedAt === null) {
+      const ca = userCreatedAt[name.toLowerCase()];
+      reachedAt = ca ? new Date(ca).getTime() : 0;
     }
     return { name, count: total, reachedAt };
   }).sort((a, b) => b.count - a.count || a.reachedAt - b.reachedAt);
@@ -395,6 +400,7 @@ export default function HotdogTracker() {
   const [entries, setEntries] = useState([]);
   const [users, setUsers] = useState([]);
   const [avatarByName, setAvatarByName] = useState({});
+  const [userCreatedAt, setUserCreatedAt] = useState({}); // name.toLowerCase() → ISO string
   const [loadingData, setLoadingData] = useState(true);
   const [processingIds, setProcessingIds] = useState(new Set());
   const [toast, setToast] = useState(null);
@@ -421,6 +427,7 @@ export default function HotdogTracker() {
         setEntries(entryData);
         setUsers(userData.map(u => u.display_name));
         setAvatarByName(Object.fromEntries(userData.map(u => [u.display_name, u.avatar_url ?? null])));
+        setUserCreatedAt(Object.fromEntries(userData.map(u => [u.display_name.toLowerCase(), u.created_at])));
         const pending = new Set(entryData.filter(e => e.video_path && !e.gif_url).map(e => e.id));
         setProcessingIds(pending);
         setPrevRankByName(rankSnapshot);
@@ -725,7 +732,7 @@ export default function HotdogTracker() {
 
       // ── Snapshot current standings before inserting the new entry ────────
       // This freezes the "before" state so arrows persist until the next log.
-      const currentStandings = computeStandings(entries, users);
+      const currentStandings = computeStandings(entries, users, userCreatedAt);
       sb.saveRankSnapshot(currentStandings).catch(err =>
         console.warn("Rank snapshot save failed (non-fatal):", err)
       );
@@ -771,7 +778,7 @@ export default function HotdogTracker() {
 
   // ── Derived ───────────────────────────────────────────────────────────────
 
-  const standings = computeStandings(entries, users);
+  const standings = computeStandings(entries, users, userCreatedAt);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
