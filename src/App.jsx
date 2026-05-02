@@ -1253,16 +1253,7 @@ export default function HotdogTracker() {
                         notes={e.notes ?? undefined}
                         mood={e.mood ?? undefined}
                         progress={processingIds.has(e.id) ? 50 : undefined}
-                        onRetry={
-                          !e.gif_url && (authedName === e.name || authedName === "Cloud")
-                            ? () => handleRetryGif(e)
-                            : undefined
-                        }
-                        onResubmit={
-                          !e.gif_url && (authedName === e.name || authedName === "Cloud")
-                            ? () => handleResubmitGif(e)
-                            : undefined
-                        }
+                        onResubmit={!e.gif_url ? () => handleResubmitGif(e) : undefined}
                         style={{ width: "100%" }}
                       />
                     </div>
