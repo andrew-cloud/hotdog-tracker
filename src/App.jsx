@@ -143,20 +143,41 @@ async function uploadVideoViaMacMini(id, file, onProgress) {
   // ── Send file in 5 MB slices ──────────────────────────────────────────────
   // Each chunk is a separate POST — small enough to pass through Cloudflare.
   // The Mac Mini reassembles, compresses with FFmpeg, then uploads to Supabase.
+  //
+  // Retries: mobile browsers occasionally drop the TCP connection mid-chunk
+  // (backgrounded tab, brief network blip, screen sleep). A chunk is a Blob
+  // slice so it's safe to resend — re-creating FormData each time avoids
+  // consuming a stream that can only be read once.
+  const MAX_CHUNK_ATTEMPTS = 4;
+
   for (let i = 0; i < totalChunks; i++) {
     const start = i * CHUNK_SIZE;
     const chunk = file.slice(start, Math.min(start + CHUNK_SIZE, file.size));
+    const url   = `${MAC_MINI_URL}/upload-chunk?id=${encodeURIComponent(id)}`;
 
-    const form = new FormData();
-    form.append("chunk", chunk, file.name);
-    form.append("index", String(i));
-    form.append("total", String(totalChunks));
+    let lastErr;
+    for (let attempt = 1; attempt <= MAX_CHUNK_ATTEMPTS; attempt++) {
+      try {
+        // Recreate FormData every attempt — consumed body can't be re-sent
+        const form = new FormData();
+        form.append("chunk", chunk, file.name);
+        form.append("index", String(i));
+        form.append("total", String(totalChunks));
 
-    const res = await fetch(
-      `${MAC_MINI_URL}/upload-chunk?id=${encodeURIComponent(id)}`,
-      { method: "POST", body: form }
-    );
-    if (!res.ok) throw new Error(`Chunk ${i + 1}/${totalChunks} failed: ${res.status}`);
+        const res = await fetch(url, { method: "POST", body: form });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        lastErr = null;
+        break; // success — move to next chunk
+      } catch (err) {
+        lastErr = err;
+        if (attempt < MAX_CHUNK_ATTEMPTS) {
+          // Exponential backoff: 1s, 2s, 4s
+          await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
+          console.warn(`Chunk ${i + 1}/${totalChunks} attempt ${attempt} failed, retrying…`, err.message);
+        }
+      }
+    }
+    if (lastErr) throw new Error(`Chunk ${i + 1}/${totalChunks} failed after ${MAX_CHUNK_ATTEMPTS} attempts: ${lastErr.message}`);
 
     onProgress(Math.round(((i + 1) / totalChunks) * 100));
   }
@@ -216,12 +237,13 @@ function ptToUTC(y, m, d, h, min, s) {
 
 // ── Streak helpers ────────────────────────────────────────────────────────────
 
-// Returns { name, streak, active } for the person with the longest all-time
-// streak of consecutive calendar days with at least one logged entry.
-// "active" = the longest streak ends today or yesterday (still unbroken).
-// Tie-break: whoever reached that streak length first (earlier end date wins).
+// Returns an array of { name, streak, active } for all contestants tied at
+// the longest all-time streak of consecutive calendar days with at least one
+// logged entry.  "active" = the streak ends today or yesterday (still unbroken).
+// When multiple people share the top streak length, all are returned so the UI
+// can display each tied contestant.
 function computeLongestStreak(entries) {
-  if (!entries.length) return null;
+  if (!entries.length) return [];
 
   const today = new Date();
   const todayStr     = toDateStr(today);
@@ -235,14 +257,13 @@ function computeLongestStreak(entries) {
     byUser[e.name].add(toDateStr(new Date(e.timestamp)));
   }
 
-  let best = null;
-
+  // Compute each person's longest streak
+  const all = [];
   for (const [name, datesSet] of Object.entries(byUser)) {
     const dates = [...datesSet].sort(); // "YYYY-MM-DD" sorts lexicographically
     let longestLen = 1, longestEnd = dates[0], cur = 1;
 
     for (let i = 1; i < dates.length; i++) {
-      // Difference in calendar days between consecutive logged dates
       const diffMs = new Date(dates[i] + "T00:00:00") - new Date(dates[i - 1] + "T00:00:00");
       if (Math.round(diffMs / 86400000) === 1) {
         cur++;
@@ -252,24 +273,21 @@ function computeLongestStreak(entries) {
       }
     }
 
-    // The longest streak is "active" only if its final day is today or yesterday
-    // AND that final day is also the person's most recent logged day
-    // (prevents labelling a 10-day streak from last year as "active" just
-    //  because they started a new streak today)
+    // Active only if the streak's final day is today or yesterday AND is the
+    // person's most recent logged day (prevents a lapsed streak from counting)
     const lastDate = dates[dates.length - 1];
     const active   = longestEnd === lastDate && (lastDate === todayStr || lastDate === yesterdayStr);
 
-    if (
-      !best ||
-      longestLen > best.streak ||
-      // Tie-break: whoever completed the streak on the earlier date achieved it first
-      (longestLen === best.streak && longestEnd < best.longestEnd)
-    ) {
-      best = { name, streak: longestLen, active, longestEnd };
-    }
+    all.push({ name, streak: longestLen, active, longestEnd });
   }
 
-  return best;
+  // Find the top streak length
+  const maxStreak = Math.max(...all.map(p => p.streak));
+
+  // Return everyone tied at the top, sorted by who reached it first
+  return all
+    .filter(p => p.streak === maxStreak)
+    .sort((a, b) => a.longestEnd < b.longestEnd ? -1 : a.longestEnd > b.longestEnd ? 1 : 0);
 }
 
 // ── Monthly battle helpers ────────────────────────────────────────────────────
@@ -596,6 +614,18 @@ export default function HotdogTracker() {
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  // ── Retry GIF conversion for stuck tiles ──────────────────────────────────
+
+  const handleRetryGif = async (entry) => {
+    if (!entry.video_path) return;
+    try {
+      await sb.triggerGifConversion(entry.id, entry.video_path);
+      showToast("🔄 Re-triggered — GIF should arrive shortly");
+    } catch (err) {
+      showToast("Retry failed: " + err.message, "error");
+    }
   };
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -1055,17 +1085,19 @@ export default function HotdogTracker() {
                     <span className="ds-streak-title">Longest Streak</span>
                   </div>
                   <div className="ds-card-body" style={{ padding: "12px 20px 16px" }}>
-                    {longestStreak ? (
-                      <div className="ds-standings-row">
-                        <div className="ds-standings-left">
-                          <Avatar name={longestStreak.name} src={avatarByName[longestStreak.name]} size="sm" />
-                          <span className="ds-standings-name">{longestStreak.name}</span>
+                    {longestStreak.length > 0 ? (
+                      longestStreak.map(p => (
+                        <div key={p.name} className="ds-standings-row">
+                          <div className="ds-standings-left">
+                            <Avatar name={p.name} src={avatarByName[p.name]} size="sm" />
+                            <span className="ds-standings-name">{p.name}</span>
+                          </div>
+                          <div className="ds-streak-right">
+                            <span className="ds-standings-count">{p.streak} days</span>
+                            {p.active && <span className="ds-streak-active">(active)</span>}
+                          </div>
                         </div>
-                        <div className="ds-streak-right">
-                          <span className="ds-standings-count">{longestStreak.streak} days</span>
-                          {longestStreak.active && <span className="ds-streak-active">(active)</span>}
-                        </div>
-                      </div>
+                      ))
                     ) : (
                       <p className="ds-empty" style={{ padding: "8px 0" }}>No one has logged a dog yet</p>
                     )}
@@ -1152,6 +1184,7 @@ export default function HotdogTracker() {
                         notes={e.notes ?? undefined}
                         mood={e.mood ?? undefined}
                         progress={processingIds.has(e.id) ? 50 : undefined}
+                        onRetry={e.gif_url ? undefined : () => handleRetryGif(e)}
                         style={{ width: "100%" }}
                       />
                     </div>
