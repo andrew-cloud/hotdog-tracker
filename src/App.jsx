@@ -493,6 +493,44 @@ export default function HotdogTracker() {
     return () => supabase.removeChannel(channel);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Fallback poll for stuck processing tiles ──────────────────────────────
+  // Realtime can miss UPDATE events (tab backgrounded, network blip, etc.).
+  // Every 15 seconds, re-fetch any entries still without a gif_url and patch
+  // them in — so GIFs always appear even if the WebSocket event was dropped.
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      // Only run when there are actually entries still processing
+      setEntries(prev => {
+        const stuck = prev.filter(e => e.video_path && !e.gif_url);
+        if (!stuck.length) return prev; // nothing to check
+
+        // Fire-and-forget: fetch each stuck entry and patch gif_url if ready
+        Promise.all(stuck.map(e => sb.getEntry(e.id))).then(fresh => {
+          const updates = fresh.filter(e => e?.gif_url);
+          if (!updates.length) return;
+
+          setEntries(current =>
+            current.map(e => {
+              const updated = updates.find(u => u.id === e.id);
+              return updated ? { ...e, gif_url: updated.gif_url } : e;
+            })
+          );
+          setProcessingIds(current => {
+            const next = new Set(current);
+            updates.forEach(u => next.delete(u.id));
+            return next;
+          });
+          if (updates.length === 1) showToast("🎉 GIF is ready in the gallery!");
+          else showToast(`🎉 ${updates.length} GIFs are ready in the gallery!`);
+        }).catch(() => {}); // silent — Realtime is the primary path
+
+        return prev; // no synchronous state change
+      });
+    }, 15_000);
+
+    return () => clearInterval(interval);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Gallery window (derived early so effects can reference gallery) ──────
   const gallery = entries.filter(e => e.video_path || e.gif_url);
 
