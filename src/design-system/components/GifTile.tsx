@@ -24,7 +24,9 @@ export interface GifTileProps {
   /** Upload/processing progress 0–100 (used when state="loading") */
   progress?:  number;
   /** Called when the user taps "Retry" on a stuck loading tile */
-  onRetry?:   () => void;
+  onRetry?:    () => void;
+  /** Called when the user taps "Resubmit" to re-upload a lost video */
+  onResubmit?: () => void;
   onClick?:   () => void;
   className?: string;
   style?:     React.CSSProperties;
@@ -40,7 +42,7 @@ const MOOD_EMOJI: Record<number, string> = {
 
 // ── Loading State ─────────────────────────────────────
 
-function LoadingContent({ progress = 0, onRetry }: { progress?: number; onRetry?: () => void }) {
+function LoadingContent({ progress = 0, onRetry, onResubmit }: { progress?: number; onRetry?: () => void; onResubmit?: () => void }) {
   return (
     <div style={{
       display:       "flex",
@@ -78,26 +80,49 @@ function LoadingContent({ progress = 0, onRetry }: { progress?: number; onRetry?
         }} />
       </div>
 
-      {onRetry && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onRetry(); }}
-          style={{
-            marginTop:   "2px",
-            background:  "none",
-            border:      "none",
-            padding:     "0",
-            fontFamily:  "Inter, sans-serif",
-            fontSize:    "12px",
-            fontWeight:  500,
-            lineHeight:  "16px",
-            color:       "var(--text\\/tertiary, #6b6882)",
-            cursor:      "pointer",
-            textDecoration: "underline",
-            textUnderlineOffset: "2px",
-          }}
-        >
-          Retry
-        </button>
+      {(onRetry || onResubmit) && (
+        <div style={{ display: "flex", gap: "12px", marginTop: "2px" }}>
+          {onRetry && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onRetry(); }}
+              style={{
+                background:  "none",
+                border:      "none",
+                padding:     "0",
+                fontFamily:  "Inter, sans-serif",
+                fontSize:    "12px",
+                fontWeight:  500,
+                lineHeight:  "16px",
+                color:       "var(--text\\/tertiary, #6b6882)",
+                cursor:      "pointer",
+                textDecoration: "underline",
+                textUnderlineOffset: "2px",
+              }}
+            >
+              Retry
+            </button>
+          )}
+          {onResubmit && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onResubmit(); }}
+              style={{
+                background:  "none",
+                border:      "none",
+                padding:     "0",
+                fontFamily:  "Inter, sans-serif",
+                fontSize:    "12px",
+                fontWeight:  500,
+                lineHeight:  "16px",
+                color:       "var(--text\\/tertiary, #6b6882)",
+                cursor:      "pointer",
+                textDecoration: "underline",
+                textUnderlineOffset: "2px",
+              }}
+            >
+              Resubmit
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -116,6 +141,7 @@ export default function GifTile({
   mood,
   progress = 0,
   onRetry,
+  onResubmit,
   onClick,
   className,
   style,
@@ -168,7 +194,7 @@ export default function GifTile({
             style={{ display: "block", width: "100%", height: "auto" }}
           />
         )}
-        {isLoading && <LoadingContent progress={progress} onRetry={onRetry} />}
+        {isLoading && <LoadingContent progress={progress} onRetry={onRetry} onResubmit={onResubmit} />}
 
         {/* Mood emoji — absolute, bottom-right */}
         {!isLoading && mood != null && MOOD_EMOJI[mood] && (

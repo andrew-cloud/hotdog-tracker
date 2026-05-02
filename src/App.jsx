@@ -424,9 +424,11 @@ export default function HotdogTracker() {
   const [toast, setToast] = useState(null);
   const [monthlyChampions, setMonthlyChampions] = useState([]);
 
-  const topSentinelRef   = useRef(null);
+  const topSentinelRef    = useRef(null);
   const bottomSentinelRef = useRef(null);
-  const scrollAnchor     = useRef(null); // { id, top } — set before each window shift
+  const scrollAnchor      = useRef(null); // { id, top } — set before each window shift
+  const resubmitInputRef  = useRef(null); // hidden file input for resubmit flow
+  const resubmitEntryRef  = useRef(null); // entry being resubmitted
   const [windowStart, setWindowStart] = useState(0);
 
   // Previous-session rank snapshot for position-change arrows (▲/▼).
@@ -663,6 +665,35 @@ export default function HotdogTracker() {
       showToast("🔄 Re-triggered — GIF should arrive shortly");
     } catch (err) {
       showToast("Retry failed: " + err.message, "error");
+    }
+  };
+
+  // ── Resubmit lost video for stuck tiles ───────────────────────────────────
+  // Opens a file picker; on selection, re-uploads using the existing entry ID
+  // so the video lands at the correct path in Supabase Storage, then triggers
+  // GIF conversion. The DB entry is left intact — only the video is replaced.
+
+  const handleResubmitGif = (entry) => {
+    resubmitEntryRef.current = entry;
+    resubmitInputRef.current?.click();
+  };
+
+  const handleResubmitFileSelected = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // reset so the same file can be picked again if needed
+    if (!file || !resubmitEntryRef.current) return;
+
+    const entry = resubmitEntryRef.current;
+    resubmitEntryRef.current = null;
+
+    try {
+      showToast("Re-uploading video…");
+      // Reuse the existing entry ID so the video lands at the right storage path
+      await uploadVideoViaMacMini(entry.id, file, () => {});
+      await sb.triggerGifConversion(entry.id, entry.video_path);
+      showToast("🔄 Re-uploaded — GIF converting in the background");
+    } catch (err) {
+      showToast("Resubmit failed: " + err.message, "error");
     }
   };
 
@@ -1222,7 +1253,16 @@ export default function HotdogTracker() {
                         notes={e.notes ?? undefined}
                         mood={e.mood ?? undefined}
                         progress={processingIds.has(e.id) ? 50 : undefined}
-                        onRetry={e.gif_url ? undefined : () => handleRetryGif(e)}
+                        onRetry={
+                          !e.gif_url && (authedName === e.name || authedName === "Cloud")
+                            ? () => handleRetryGif(e)
+                            : undefined
+                        }
+                        onResubmit={
+                          !e.gif_url && (authedName === e.name || authedName === "Cloud")
+                            ? () => handleResubmitGif(e)
+                            : undefined
+                        }
                         style={{ width: "100%" }}
                       />
                     </div>
@@ -1253,6 +1293,15 @@ export default function HotdogTracker() {
           />
         </div>
       )}
+
+      {/* Hidden file input for the resubmit flow */}
+      <input
+        ref={resubmitInputRef}
+        type="file"
+        accept="video/mp4,video/quicktime"
+        style={{ display: "none" }}
+        onChange={handleResubmitFileSelected}
+      />
 
     </div>
   );
