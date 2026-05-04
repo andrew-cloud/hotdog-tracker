@@ -1131,7 +1131,7 @@ export default function HotdogTracker() {
                         value={notes}
                         placeholder={`"So there I was, just me and the 7/11 employee..."`}
                         onChange={e => setNotes(e.target.value)}
-                        maxLength={120}
+                        maxLength={240}
                         style={{ width: "100%" }}
                       />
                     </div>
