@@ -61,9 +61,9 @@ export default function Radio({
 
   const labelStyle: React.CSSProperties = {
     fontFamily: "Inter, sans-serif",
-    fontSize:   "14px",
+    fontSize:   "16px",
     fontWeight: 400,
-    lineHeight: "20px",
+    lineHeight: "22px",
     color:      isDisabled
       ? "var(--text\\/disabled, #4a4860)"
       : isSelected
