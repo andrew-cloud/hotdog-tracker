@@ -172,6 +172,30 @@ export default function Textarea({
       </div>
 
       {showHint && hint && <p style={hintStyle}>{hint}</p>}
+
+      {maxLength != null && (() => {
+        const len     = (value ?? "").length;
+        const pct     = len / maxLength;
+        const color   = pct >= 0.95
+          ? "var(--semantic\\/danger, #e85c5c)"
+          : pct >= 0.8
+          ? "var(--brand\\/amber, #e8a44a)"
+          : "var(--text\\/tertiary, #6b6882)";
+        return (
+          <p style={{
+            fontFamily: "Inter, sans-serif",
+            fontSize:   "13px",
+            fontWeight: 400,
+            lineHeight: "18px",
+            color,
+            margin:     0,
+            width:      "100%",
+            textAlign:  "right",
+          }}>
+            {len} / {maxLength}
+          </p>
+        );
+      })()}
     </div>
   );
 }
