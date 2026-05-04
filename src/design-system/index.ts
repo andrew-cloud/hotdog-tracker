@@ -29,6 +29,9 @@ export type { InputProps }        from './components/Input';
 export { default as Radio }       from './components/Radio';
 export type { RadioProps }        from './components/Radio';
 
+export { default as RadioGroup }  from './components/RadioGroup';
+export type { RadioGroupProps, RadioOption } from './components/RadioGroup';
+
 export { default as Select }      from './components/Select';
 export type { SelectProps }       from './components/Select';
 

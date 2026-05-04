@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 import "./App.css";
-import { Avatar, Button, Input, Stepper, Textarea, UploadField, GifTile, Toast, Divider, TabBar, Select } from "./design-system";
+import { Avatar, Button, Input, Stepper, Textarea, UploadField, GifTile, Toast, Divider, TabBar, Select, RadioGroup } from "./design-system";
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
 
@@ -250,16 +250,22 @@ function computeLongestStreak(entries) {
   const yesterday    = new Date(today); yesterday.setDate(today.getDate() - 1);
   const yesterdayStr = toDateStr(yesterday);
 
-  // Collect unique calendar dates per user
+  // Collect entries per user, and track the earliest timestamp per calendar date
+  // (needed to tiebreak when multiple users share the same longestEnd date)
   const byUser = {};
   for (const e of entries) {
-    if (!byUser[e.name]) byUser[e.name] = new Set();
-    byUser[e.name].add(toDateStr(new Date(e.timestamp)));
+    if (!byUser[e.name]) byUser[e.name] = { dates: new Set(), firstTs: {} };
+    const d = toDateStr(new Date(e.timestamp));
+    byUser[e.name].dates.add(d);
+    // Keep the earliest log timestamp for each date
+    if (byUser[e.name].firstTs[d] === undefined || e.timestamp < byUser[e.name].firstTs[d]) {
+      byUser[e.name].firstTs[d] = e.timestamp;
+    }
   }
 
   // Compute each person's longest streak
   const all = [];
-  for (const [name, datesSet] of Object.entries(byUser)) {
+  for (const [name, { dates: datesSet, firstTs }] of Object.entries(byUser)) {
     const dates = [...datesSet].sort(); // "YYYY-MM-DD" sorts lexicographically
     let longestLen = 1, longestEnd = dates[0], cur = 1;
 
@@ -278,16 +284,25 @@ function computeLongestStreak(entries) {
     const lastDate = dates[dates.length - 1];
     const active   = longestEnd === lastDate && (lastDate === todayStr || lastDate === yesterdayStr);
 
-    all.push({ name, streak: longestLen, active, longestEnd });
+    // longestEndTs: earliest log on longestEnd — tiebreaker when dates are equal
+    const longestEndTs = firstTs[longestEnd] ?? 0;
+
+    all.push({ name, streak: longestLen, active, longestEnd, longestEndTs });
   }
 
   // Find the top streak length
   const maxStreak = Math.max(...all.map(p => p.streak));
 
-  // Return everyone tied at the top, sorted by who reached it first
+  // Return everyone tied at the top, sorted by who reached it first.
+  // Primary: longestEnd date (earlier = reached it first).
+  // Secondary: earliest log on that date (tiebreaker within the same day).
   return all
     .filter(p => p.streak === maxStreak)
-    .sort((a, b) => a.longestEnd < b.longestEnd ? -1 : a.longestEnd > b.longestEnd ? 1 : 0);
+    .sort((a, b) =>
+      a.longestEnd < b.longestEnd ? -1 :
+      a.longestEnd > b.longestEnd ?  1 :
+      a.longestEndTs - b.longestEndTs
+    );
 }
 
 // ── Monthly battle helpers ────────────────────────────────────────────────────
@@ -408,6 +423,7 @@ export default function HotdogTracker() {
   const [count, setCount] = useState(1);
   const [notes, setNotes] = useState("");
   const [mood, setMood] = useState(3); // 1–5, default neutral
+  const [daysAgo, setDaysAgo] = useState(0); // 0 = today, 1–3 = backdated
   const [videoFile, setVideoFile] = useState(null);
   const [videoFileSize, setVideoFileSize] = useState("");
   const [videoState, setVideoState] = useState("default");
@@ -841,7 +857,7 @@ export default function HotdogTracker() {
         id,
         name: authedName,
         count: Number(count),
-        timestamp: Date.now(),
+        timestamp: Date.now() - daysAgo * 24 * 60 * 60 * 1000,
         gif_url: null,
         video_path: videoPath,
         notes: notes.trim() || null,
@@ -861,6 +877,7 @@ export default function HotdogTracker() {
       setCount(1);
       setNotes("");
       setMood(3);
+      setDaysAgo(0);
       setVideoFile(null);
       setVideoFileSize("");
       setVideoState("default");
@@ -1042,6 +1059,35 @@ export default function HotdogTracker() {
                         onFile={handleFileSelect}
                         accept="video/*"
                         style={{ width: "100%" }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="ds-card">
+                    <div className="ds-card-header">
+                      <span className="ds-card-title">When did you chow down?</span>
+                      {daysAgo > 0 && (() => {
+                        const then = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
+                        const now  = new Date();
+                        const crossesMonth = then.getMonth() !== now.getMonth() || then.getFullYear() !== now.getFullYear();
+                        return crossesMonth ? (
+                          <span className="ds-card-subtitle" style={{ color: "var(--semantic\\/warning, #e8a44a)" }}>
+                            This date is in a past month — it won't affect that month's champion.
+                          </span>
+                        ) : null;
+                      })()}
+                    </div>
+                    <div className="ds-card-body">
+                      <RadioGroup
+                        name="daysAgo"
+                        value={daysAgo}
+                        onChange={(v) => setDaysAgo(Number(v))}
+                        options={[
+                          { value: 0, label: "Today" },
+                          { value: 1, label: "1 day ago" },
+                          { value: 2, label: "2 days ago" },
+                          { value: 3, label: "3 days ago" },
+                        ]}
                       />
                     </div>
                   </div>

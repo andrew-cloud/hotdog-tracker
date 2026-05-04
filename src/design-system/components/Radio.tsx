@@ -42,7 +42,7 @@ export default function Radio({
     display:        "flex",
     alignItems:     "center",
     justifyContent: "center",
-    background:     "var(--surface\\/bg-tertiary, #1e1e28)",
+    background:     "transparent",
     border:         isSelected
       ? "2px solid var(--brand\\/amber, #e8a44a)"
       : isDisabled
@@ -66,6 +66,8 @@ export default function Radio({
     lineHeight: "20px",
     color:      isDisabled
       ? "var(--text\\/disabled, #4a4860)"
+      : isSelected
+      ? "var(--text\\/primary, #f0ede6)"
       : "var(--text\\/secondary, #9e9bb4)",
     whiteSpace: "nowrap",
     userSelect: "none",
