@@ -236,12 +236,12 @@ function ptToUTC(y, m, d, h, min, s) {
 }
 
 // ── July 4th 2025 double-count ────────────────────────────────────────────────
-// Entries logged on July 4, 2025 (Pacific Time) count as ×2 in all leaderboards
+// Entries logged on July 4, 2026 (Pacific Time) count as ×2 in all leaderboards
 // and contribute an extra consecutive day toward streaks.
 
 function isJuly4th2025PT(timestamp) {
   const d = new Date(typeof timestamp === "number" ? timestamp : Date.parse(timestamp));
-  return toDateStr(d) === "2025-07-04";
+  return toDateStr(d) === "2026-07-04";
 }
 
 // ── Streak helpers ────────────────────────────────────────────────────────────
@@ -270,9 +270,9 @@ function computeLongestStreak(entries) {
     if (byUser[e.name].firstTs[d] === undefined || e.timestamp < byUser[e.name].firstTs[d]) {
       byUser[e.name].firstTs[d] = e.timestamp;
     }
-    // July 4, 2025 counts as two consecutive days — inject a synthetic July 5
+    // July 4, 2026 counts as two consecutive days — inject a synthetic July 5
     // so the streak extends an extra day for anyone who logged that day.
-    if (d === "2025-07-04") byUser[e.name].dates.add("2025-07-05");
+    if (d === "2026-07-04") byUser[e.name].dates.add("2026-07-05");
   }
 
   // Compute each person's longest streak
