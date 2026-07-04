@@ -23,6 +23,8 @@ export interface GifTileProps {
   mood?:      number | null;
   /** Upload/processing progress 0–100 (used when state="loading") */
   progress?:  number;
+  /** Whether this entry falls on July 4, 2025 — counts double in standings */
+  july4th?:   boolean;
   /** Called when the user taps "Retry" on a stuck loading tile */
   onRetry?:    () => void;
   /** Called when the user taps "Resubmit" to re-upload a lost video */
@@ -140,6 +142,7 @@ export default function GifTile({
   notes,
   mood,
   progress = 0,
+  july4th  = false,
   onRetry,
   onResubmit,
   onClick,
@@ -195,6 +198,31 @@ export default function GifTile({
           />
         )}
         {isLoading && <LoadingContent progress={progress} onRetry={onRetry} onResubmit={onResubmit} />}
+
+        {/* July 4th 2025 double-count badge — absolute, top-right */}
+        {!isLoading && july4th && (
+          <div style={{
+            position:       "absolute",
+            right:          "10px",
+            top:            "10px",
+            background:     "rgba(0,0,0,0.60)",
+            backdropFilter: "blur(4px)",
+            borderRadius:   "8px",
+            padding:        "4px 8px",
+            fontFamily:     "Inter, sans-serif",
+            fontSize:       "13px",
+            fontWeight:     700,
+            lineHeight:     "1",
+            color:          "#fff",
+            userSelect:     "none",
+            display:        "flex",
+            alignItems:     "center",
+            gap:            "4px",
+            letterSpacing:  "0.02em",
+          }}>
+            🇺🇸 x2
+          </div>
+        )}
 
         {/* Mood emoji — absolute, bottom-right */}
         {!isLoading && mood != null && MOOD_EMOJI[mood] && (

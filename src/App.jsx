@@ -235,6 +235,15 @@ function ptToUTC(y, m, d, h, min, s) {
   return candidate.getTime() + getPacificOffsetMs(candidate);
 }
 
+// ── July 4th 2025 double-count ────────────────────────────────────────────────
+// Entries logged on July 4, 2025 (Pacific Time) count as ×2 in all leaderboards
+// and contribute an extra consecutive day toward streaks.
+
+function isJuly4th2025PT(timestamp) {
+  const d = new Date(typeof timestamp === "number" ? timestamp : Date.parse(timestamp));
+  return toDateStr(d) === "2025-07-04";
+}
+
 // ── Streak helpers ────────────────────────────────────────────────────────────
 
 // Returns an array of { name, streak, active } for all contestants tied at
@@ -261,6 +270,9 @@ function computeLongestStreak(entries) {
     if (byUser[e.name].firstTs[d] === undefined || e.timestamp < byUser[e.name].firstTs[d]) {
       byUser[e.name].firstTs[d] = e.timestamp;
     }
+    // July 4, 2025 counts as two consecutive days — inject a synthetic July 5
+    // so the streak extends an extra day for anyone who logged that day.
+    if (d === "2025-07-04") byUser[e.name].dates.add("2025-07-05");
   }
 
   // Compute each person's longest streak
@@ -358,10 +370,10 @@ function computeStandings(entries, users, userCreatedAt = {}) {
   }
   return Object.values(byUser).map(({ name, entries: ents }) => {
     const sorted = [...ents].sort((a, b) => a.timestamp - b.timestamp);
-    const total = sorted.reduce((s, e) => s + e.count, 0);
+    const total = sorted.reduce((s, e) => s + e.count * (isJuly4th2025PT(e.timestamp) ? 2 : 1), 0);
     let cum = 0, reachedAt = null;
     for (const e of sorted) {
-      cum += e.count;
+      cum += e.count * (isJuly4th2025PT(e.timestamp) ? 2 : 1);
       if (cum >= total) { reachedAt = e.timestamp; break; }
     }
     // Fall back to signup time so zero-count users sort by join order
@@ -579,7 +591,7 @@ export default function HotdogTracker() {
   for (const e of battleEntries) {
     const k = e.name.toLowerCase();
     if (!battleTotals[k]) battleTotals[k] = { name: e.name, count: 0, lastTs: 0 };
-    battleTotals[k].count += e.count;
+    battleTotals[k].count += e.count * (isJuly4th2025PT(e.timestamp) ? 2 : 1);
     battleTotals[k].lastTs = Math.max(battleTotals[k].lastTs, e.timestamp);
   }
   const battleStandings = Object.values(battleTotals)
@@ -1298,6 +1310,7 @@ export default function HotdogTracker() {
                         date={formatDate(e.timestamp)}
                         notes={e.notes ?? undefined}
                         mood={e.mood ?? undefined}
+                        july4th={isJuly4th2025PT(e.timestamp)}
                         progress={processingIds.has(e.id) ? 50 : undefined}
                         onResubmit={!e.gif_url ? () => handleResubmitGif(e) : undefined}
                         style={{ width: "100%" }}
