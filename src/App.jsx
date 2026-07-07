@@ -580,11 +580,18 @@ export default function HotdogTracker() {
   // Only show a battle card up through April 2027
   const showBattleCard = currentMonthStr <= "2027-04";
 
+  // ── Dropped competitors ───────────────────────────────────────────────────
+  // These users are permanently excluded from standings, streak, and battle.
+  // Their entries stay in the database and still appear under past champion cards.
+  const DROPPED = ["tanto"];
+  const contestEntries = entries.filter(e => !DROPPED.includes(e.name.toLowerCase()));
+  const contestUsers   = users.filter(u => !DROPPED.includes(u.toLowerCase()));
+
   // Pacific month boundaries as UTC timestamps
   const lastDayOfMonth = new Date(pacificYear, pacificMonth, 0).getDate();
   const monthStart = ptToUTC(pacificYear, pacificMonth, 1, 0, 0, 0);
   const monthEnd   = ptToUTC(pacificYear, pacificMonth, lastDayOfMonth, 23, 59, 59);
-  const battleEntries = entries.filter(e => e.timestamp >= monthStart && e.timestamp <= monthEnd);
+  const battleEntries = contestEntries.filter(e => e.timestamp >= monthStart && e.timestamp <= monthEnd);
 
   // Aggregate into battle standings — top 3, tie-break: most dogs, then earliest last entry
   const battleTotals = {};
@@ -609,7 +616,7 @@ export default function HotdogTracker() {
   const pastChampions = monthlyChampions.filter(c => c.month < currentMonthStr);
 
   // Longest streak across all contestants
-  const longestStreak = computeLongestStreak(entries);
+  const longestStreak = computeLongestStreak(contestEntries);
 
   // Sliding window constants
   const WINDOW_SIZE      = 24;  // max tiles in the DOM at once
@@ -859,7 +866,7 @@ export default function HotdogTracker() {
 
       // ── Snapshot current standings before inserting the new entry ────────
       // This freezes the "before" state so arrows persist until the next log.
-      const currentStandings = computeStandings(entries, users, userCreatedAt);
+      const currentStandings = computeStandings(contestEntries, contestUsers, userCreatedAt);
       sb.saveRankSnapshot(currentStandings).catch(err =>
         console.warn("Rank snapshot save failed (non-fatal):", err)
       );
@@ -906,7 +913,7 @@ export default function HotdogTracker() {
 
   // ── Derived ───────────────────────────────────────────────────────────────
 
-  const standings = computeStandings(entries, users, userCreatedAt);
+  const standings = computeStandings(contestEntries, contestUsers, userCreatedAt);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
