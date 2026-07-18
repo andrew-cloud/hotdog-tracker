@@ -194,18 +194,6 @@ export default function LineChart({
             {/* y-axis */}
             <line x1={PAD_LEFT} y1={PAD_TOP} x2={PAD_LEFT} y2={baselineY} stroke="rgba(18,18,18,0.12)" strokeWidth="1" />
 
-            {yTicks.map((v) => (
-              <text
-                key={v}
-                x={PAD_LEFT - 8}
-                y={yAt(v) + 4}
-                textAnchor="end"
-                style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "13px", fill: "var(--text\\/secondary, #727272)", letterSpacing: "0.8px" }}
-              >
-                {Math.round(v)}
-              </text>
-            ))}
-
             {compareLinePath && (
               <path d={compareLinePath} fill="none" stroke="#9a9a9a" strokeWidth="2" strokeDasharray="6 4" strokeLinecap="round" strokeLinejoin="round" />
             )}
@@ -219,18 +207,46 @@ export default function LineChart({
               />
             )}
 
-            {labelIdxs.map((i) => (
-              <text
-                key={i}
-                x={xAt(i)}
-                y={H - 6}
-                textAnchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"}
-                style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "13px", fill: "var(--text\\/secondary, #727272)", textTransform: "uppercase", letterSpacing: "0.8px" }}
-              >
-                {formatShortDate(data[i].date)}
-              </text>
-            ))}
           </svg>
+
+          {/* Axis labels — plain HTML overlay rather than SVG <text>, for the same
+             reason as the marker dots below: preserveAspectRatio="none" non-uniformly
+             scales the viewBox (responsive width, fixed height), which would squish
+             any same-space glyphs horizontally. */}
+          {yTicks.map((v) => (
+            <span key={v} style={{
+              position:      "absolute",
+              left:          `${((PAD_LEFT - 8) / W) * 100}%`,
+              top:           `${(yAt(v) / H) * 100}%`,
+              transform:     "translate(-100%, -50%)",
+              fontFamily:    "'Space Grotesk', sans-serif",
+              fontSize:      "13px",
+              color:         "var(--text\\/secondary, #727272)",
+              letterSpacing: "0.8px",
+              whiteSpace:    "nowrap",
+              pointerEvents: "none",
+            }}>
+              {Math.round(v)}
+            </span>
+          ))}
+
+          {labelIdxs.map((i) => (
+            <span key={i} style={{
+              position:      "absolute",
+              left:          `${(xAt(i) / W) * 100}%`,
+              top:           `${H - 18}px`,
+              transform:     i === 0 ? "translateX(0%)" : i === n - 1 ? "translateX(-100%)" : "translateX(-50%)",
+              fontFamily:    "'Space Grotesk', sans-serif",
+              fontSize:      "13px",
+              color:         "var(--text\\/secondary, #727272)",
+              textTransform: "uppercase",
+              letterSpacing: "0.8px",
+              whiteSpace:    "nowrap",
+              pointerEvents: "none",
+            }}>
+              {formatShortDate(data[i].date)}
+            </span>
+          ))}
 
           {/* Today marker — plain HTML dot, positioned by percentage rather than
              drawn inside the SVG's viewBox, since preserveAspectRatio="none"

@@ -1512,7 +1512,7 @@ export default function HotdogTracker() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                     <StatTile icon="🌭" value={profileStats.totalDogs} label="Total dogs eaten" />
                     <StatTile icon="🔥" value={profileStats.longestStreak} label="Longest streak" />
-                    <StatTile icon="📈" value={profileStats.mostInADay} label="Most in a day" />
+                    <StatTile icon="😋" value={profileStats.mostInADay} label="Most in a day" />
                     <StatTile icon="⏱️" value={formatDuration(profileStats.avgConsumptionSeconds)} label="Avg consumption time" />
                     <LineChart
                       data={profileDailySeries}
