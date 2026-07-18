@@ -57,11 +57,11 @@ function LoadingContent({ progress = 0, onRetry, onResubmit }: { progress?: numb
       <span style={{ fontSize: "24px", lineHeight: "28px" }}>⏳</span>
 
       <span style={{
-        fontFamily: "Inter, sans-serif",
+        fontFamily: "'Space Grotesk', sans-serif",
         fontSize:   "16px",
         fontWeight: 600,
         lineHeight: "22px",
-        color:      "var(--brand\\/amber, #A30003)",
+        color:      "var(--text\\/primary, #f0ede6)", // cream — was the amber/red brand color, hard to read on the dark placeholder bg
         whiteSpace: "nowrap",
       }}>
         Processing GIF…
@@ -93,7 +93,7 @@ function LoadingContent({ progress = 0, onRetry, onResubmit }: { progress?: numb
                 background:  "none",
                 border:      "none",
                 padding:     "0",
-                fontFamily:  "Inter, sans-serif",
+                fontFamily:  "'Space Grotesk', sans-serif",
                 fontSize:    "12px",
                 fontWeight:  500,
                 lineHeight:  "16px",
@@ -113,7 +113,7 @@ function LoadingContent({ progress = 0, onRetry, onResubmit }: { progress?: numb
                 background:  "none",
                 border:      "none",
                 padding:     "0",
-                fontFamily:  "Inter, sans-serif",
+                fontFamily:  "'Space Grotesk', sans-serif",
                 fontSize:    "12px",
                 fontWeight:  500,
                 lineHeight:  "16px",
@@ -401,7 +401,7 @@ export default function GifTile({
               <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0, overflow: "hidden" }}>
                 <Avatar name={name} src={avatarUrl} size="md" />
                 <span style={{
-                  fontFamily:   "Inter, sans-serif",
+                  fontFamily:   "'Martian Mono', monospace",
                   fontSize:     "18px",
                   fontWeight:   600,
                   lineHeight:   "26px",
@@ -417,11 +417,11 @@ export default function GifTile({
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
                 <span style={{
-                  fontFamily: "Inter, sans-serif",
+                  fontFamily: "'Martian Mono', monospace",
                   fontSize:   "16px",
                   fontWeight: 600,
                   lineHeight: "26px",
-                  color:      "var(--brand\\/amber, #A30003)",
+                  color:      "#121212",
                   whiteSpace: "nowrap",
                 }}>
                   +{count}
@@ -445,9 +445,9 @@ export default function GifTile({
 
             {date && (
               <span style={{
-                fontFamily:   "Inter, sans-serif",
+                fontFamily:   "'Martian Mono', monospace",
                 fontSize:     "14px",
-                fontWeight:   400,
+                fontWeight:   500,
                 lineHeight:   "16px",
                 color:        "var(--text\\/tertiary, #727272)",
                 overflow:     "hidden",

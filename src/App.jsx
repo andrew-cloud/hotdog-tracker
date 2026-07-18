@@ -372,7 +372,7 @@ const RETURNING_WELCOME_MESSAGES = [
   (n) => `To those that come after, ${n}.`,
   (n) => `Impwessive, ${n}. Daddy wikes.`,
   (n) => `It's a bad day to be a hot dog around ${n}.`,
-  (n) => `I bet you liked it, too, ${n}.`,
+  (n) => `I bet you even liked it, ${n}.`,
   (n) => `And ${n} took it personal.`,
 ];
 function pickWelcomeMessage(isNewUser, name) {
