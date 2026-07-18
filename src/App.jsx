@@ -1577,7 +1577,7 @@ export default function HotdogTracker() {
                       style={{ gridColumn: "1 / -1" }}
                     />
                     <StatTile value={profileStats.avgPerDay.toFixed(1)} label="Dogs per day avg" />
-                    <StatTile value={profileStats.favoriteDay ?? "—"} label="Favorite day to eat" />
+                    <StatTile value={profileStats.favoriteDay ?? "—"} label="Favorite day to dog" />
                   </div>
                 </>
               )}
