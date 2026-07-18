@@ -35,6 +35,9 @@ export type { RadioGroupProps, RadioOption } from './components/RadioGroup';
 export { default as Select }      from './components/Select';
 export type { SelectProps }       from './components/Select';
 
+export { default as StatTile }    from './components/StatTile';
+export type { StatTileProps }     from './components/StatTile';
+
 export { default as Stepper }     from './components/Stepper';
 export type { StepperProps }      from './components/Stepper';
 

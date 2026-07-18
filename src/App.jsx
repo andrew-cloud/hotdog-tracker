@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 import "./App.css";
-import { Avatar, Button, Card, Input, Stepper, Textarea, UploadField, GifTile, Toast, Divider, TabBar, Select, RadioGroup } from "./design-system";
+import { Avatar, Button, Card, Input, Stepper, Textarea, UploadField, GifTile, Toast, Divider, TabBar, Select, RadioGroup, StatTile } from "./design-system";
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
 
@@ -406,6 +406,41 @@ function computeStandings(entries, users, userCreatedAt = {}) {
     }
     return { name, count: total, reachedAt };
   }).sort((a, b) => b.count - a.count || a.reachedAt - b.reachedAt);
+}
+
+// Per-contestant profile stats: total dogs eaten, longest streak of
+// consecutive calendar days with >=1 entry, and the most dogs eaten in a
+// single day. Mirrors the July 4th double-count and streak logic used by
+// computeStandings/computeLongestStreak, just scoped to one person.
+function computeUserStats(entries, name) {
+  const mine = entries.filter(e => e.name.toLowerCase() === name.toLowerCase());
+  if (!mine.length) return { totalDogs: 0, longestStreak: 0, mostInADay: 0 };
+
+  const byDate = {};
+  for (const e of mine) {
+    const d = toDateStr(new Date(e.timestamp));
+    const amt = e.count * (isJuly4th2025PT(e.timestamp) ? 2 : 1);
+    byDate[d] = (byDate[d] || 0) + amt;
+  }
+
+  const totalDogs   = Object.values(byDate).reduce((s, n) => s + n, 0);
+  const mostInADay  = Math.max(...Object.values(byDate));
+
+  const datesSet = new Set(Object.keys(byDate));
+  if (datesSet.has("2026-07-04")) datesSet.add("2026-07-05"); // synthetic — July 4th extends the streak an extra day
+  const dates = [...datesSet].sort();
+  let longestStreak = 1, cur = 1;
+  for (let i = 1; i < dates.length; i++) {
+    const diffMs = new Date(dates[i] + "T00:00:00") - new Date(dates[i - 1] + "T00:00:00");
+    if (Math.round(diffMs / 86400000) === 1) {
+      cur++;
+      if (cur > longestStreak) longestStreak = cur;
+    } else {
+      cur = 1;
+    }
+  }
+
+  return { totalDogs, longestStreak, mostInADay };
 }
 
 const EMOJI_POOL = [
@@ -955,6 +990,7 @@ export default function HotdogTracker() {
   // ── Derived ───────────────────────────────────────────────────────────────
 
   const standings = computeStandings(contestEntries, contestUsers, userCreatedAt);
+  const profileStats = authedName ? computeUserStats(contestEntries, authedName) : null;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -975,7 +1011,7 @@ export default function HotdogTracker() {
             { value: "log",       label: "Log a dog"  },
             { value: "standings", label: "Standings"  },
             { value: "gallery",   label: "Gallery"    },
-            { value: "profile",   label: "Profile (Coming Soon)", disabled: true },
+            { value: "profile",   label: "Profile" },
           ]}
           value={tab}
           onChange={val => handleTabChange(val)}
@@ -1357,6 +1393,28 @@ export default function HotdogTracker() {
                       <div style={{ height: (gallery.length - windowEnd) * EST_TILE_HEIGHT, flexShrink: 0 }} />
                     </>
                   )}
+                </>
+              )}
+            </>
+          )}
+
+          {/* ══ PROFILE TAB ═══════════════════════════════════════════════════ */}
+          {tab === "profile" && (
+            <>
+              {!authedName ? (
+                <p className="ds-empty">Log a dog first to see your profile! 🌭</p>
+              ) : (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <Avatar name={authedName} src={avatarByName[authedName]} size="lg" />
+                    <span className="ds-welcome">{authedName}</span>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <StatTile icon="🌭" value={profileStats.totalDogs} label="Total dogs eaten" />
+                    <StatTile icon="🔥" value={profileStats.longestStreak} label="Longest streak" />
+                    <StatTile icon="📈" value={profileStats.mostInADay} label="Most in a day" />
+                  </div>
                 </>
               )}
             </>
