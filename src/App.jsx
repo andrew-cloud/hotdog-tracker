@@ -360,6 +360,27 @@ function formatTime(timestamp) {
 
 const NEW_USER_SENTINEL = "__new__";
 
+// Welcome message shown above "Hot dogs consumed" after login. New
+// contestants always get the same greeting; returning contestants get a
+// randomly-picked line, resolved once at login time (not on every render).
+const NEW_CONTESTANT_WELCOME = "Welcome to the best year of your life.";
+const RETURNING_WELCOME_MESSAGES = [
+  (n) => `Nice burp, ${n}.`,
+  (n) => `${n} is getting big and strong!`,
+  (n) => `Step on their throats, ${n}.`,
+  (n) => `Oooo wasn't that yummy, ${n}?!`,
+  (n) => `To those that come after, ${n}.`,
+  (n) => `Impwessive, ${n}. Daddy wikes.`,
+  (n) => `It's a bad day to be a hot dog around ${n}.`,
+  (n) => `I bet you liked it, too, ${n}.`,
+  (n) => `And ${n} took it personal.`,
+];
+function pickWelcomeMessage(isNewUser, name) {
+  if (isNewUser) return NEW_CONTESTANT_WELCOME;
+  const pick = RETURNING_WELCOME_MESSAGES[Math.floor(Math.random() * RETURNING_WELCOME_MESSAGES.length)];
+  return pick(name);
+}
+
 // Computes standings sorted by count desc, tiebroken by who reached that
 // count first (earliest timestamp of the entry that completed their total).
 function computeStandings(entries, users, userCreatedAt = {}) {
@@ -445,6 +466,7 @@ export default function HotdogTracker() {
   const [isNewUser, setIsNewUser] = useState(null);
   const [confirming, setConfirming] = useState(false);
   const [authedName, setAuthedName] = useState(null);
+  const [welcomeMessage, setWelcomeMessage] = useState("");
 
   // Log form state
   const [count, setCount] = useState(1);
@@ -832,6 +854,7 @@ export default function HotdogTracker() {
         }
       }
       setAuthedName(activeName);
+      setWelcomeMessage(pickWelcomeMessage(isNewUser, activeName));
       setStep("entry");
       // Persist the resolved name (not the raw dropdown value) so a "New
       // contestant" selection becomes their real name for next time, instead
@@ -1065,7 +1088,7 @@ export default function HotdogTracker() {
               {step === "entry" && (
                 <>
                   <p className="ds-welcome">
-                    Welcome{isNewUser === false ? " back" : " to the league"}, {authedName}!
+                    {welcomeMessage}
                   </p>
 
                   <Card variant="default" size="md" title="Hot dogs consumed" subtitle={false}>

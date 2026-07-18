@@ -103,7 +103,7 @@ export default function Select({
           style={{
             display:          "block",
             width:            "100%",
-            padding:          "9px 36px 9px 12px",
+            padding:          "12px 36px 12px 12px", // matches Input's 12px field padding so the two controls share the same overall height
             boxSizing:        "border-box",
             background:       FIELD_BG[stateKey],
             border:           FIELD_BORDER[stateKey],
@@ -113,7 +113,7 @@ export default function Select({
             // iOS Safari zooms on inputs < 16px — 16px prevents zoom
             fontSize:         "16px",
             fontWeight:       500,
-            lineHeight:       "20px",
+            lineHeight:       "22px", // matches Input's line-height
             // Hide the browser's native arrow — we render our own
             appearance:       "none",
             WebkitAppearance: "none",
