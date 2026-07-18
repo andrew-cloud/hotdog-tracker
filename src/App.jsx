@@ -387,6 +387,13 @@ function formatDuration(seconds) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+// "1st" / "2nd" / "3rd" / "4th" ... — handles the 11th/12th/13th exceptions
+function formatOrdinal(n) {
+  const suffixes = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return `${n}${suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]}`;
+}
+
 const NEW_USER_SENTINEL = "__new__";
 
 // Welcome message shown above "Hot dogs consumed" after login. New
@@ -437,13 +444,17 @@ function computeStandings(entries, users, userCreatedAt = {}) {
   }).sort((a, b) => b.count - a.count || a.reachedAt - b.reachedAt);
 }
 
+// Season start (Pacific Time) — used to scope the profile chart and the
+// "dogs per day" average to the actual contest window, not all-time.
+const SEASON_START_PT = "2026-05-01";
+
 // Per-contestant profile stats: total dogs eaten, longest streak of
 // consecutive calendar days with >=1 entry, and the most dogs eaten in a
 // single day. Mirrors the July 4th double-count and streak logic used by
 // computeStandings/computeLongestStreak, just scoped to one person.
 function computeUserStats(entries, name) {
   const mine = entries.filter(e => e.name.toLowerCase() === name.toLowerCase());
-  if (!mine.length) return { totalDogs: 0, longestStreak: 0, mostInADay: 0, avgConsumptionSeconds: null };
+  if (!mine.length) return { totalDogs: 0, rawTotalDogs: 0, longestStreak: 0, mostInADay: 0, avgConsumptionSeconds: null, avgPerDay: 0, favoriteDay: null };
 
   const byDate = {};
   for (const e of mine) {
@@ -454,6 +465,11 @@ function computeUserStats(entries, name) {
 
   const totalDogs   = Object.values(byDate).reduce((s, n) => s + n, 0);
   const mostInADay  = Math.max(...Object.values(byDate));
+
+  // Raw total — the actual number of hot dogs logged, with no July 4th (or
+  // other event) multiplier applied. `totalDogs` above stays augmented since
+  // it needs to match the standings/leaderboard logic; this is the true count.
+  const rawTotalDogs = mine.reduce((s, e) => s + e.count, 0);
 
   const datesSet = new Set(Object.keys(byDate));
   if (datesSet.has("2026-07-04")) datesSet.add("2026-07-05"); // synthetic — July 4th extends the streak an extra day
@@ -482,13 +498,34 @@ function computeUserStats(entries, name) {
     ? perDogRates.reduce((s, r) => s + r, 0) / perDogRates.length
     : null;
 
-  return { totalDogs, longestStreak, mostInADay, avgConsumptionSeconds };
+  // Dogs-per-day average — total dogs eaten over the number of calendar days
+  // in the season so far (May 1 through today), not just days the contestant
+  // actually logged something, so it reads as a true season-wide rate.
+  const todayStr = toDateStr(new Date());
+  const seasonStartMs = Date.parse(SEASON_START_PT + "T00:00:00Z");
+  const seasonTodayMs = Date.parse(todayStr + "T00:00:00Z");
+  const daysInSeason  = Math.floor((seasonTodayMs - seasonStartMs) / 86400000) + 1;
+  const avgPerDay = daysInSeason > 0 ? totalDogs / daysInSeason : 0;
+
+  // Favorite day of the week — whichever weekday (Pacific Time) has the
+  // highest total dogs eaten across all of this contestant's entries.
+  const dayOfWeekTotals = {};
+  for (const e of mine) {
+    const weekday = new Date(e.timestamp).toLocaleDateString("en-US", { weekday: "long", timeZone: TZ });
+    const amt = e.count * (isJuly4th2025PT(e.timestamp) ? 2 : 1);
+    dayOfWeekTotals[weekday] = (dayOfWeekTotals[weekday] || 0) + amt;
+  }
+  let favoriteDay = null, favoriteDayTotal = -1;
+  for (const [day, total] of Object.entries(dayOfWeekTotals)) {
+    if (total > favoriteDayTotal) { favoriteDay = day; favoriteDayTotal = total; }
+  }
+
+  return { totalDogs, rawTotalDogs, longestStreak, mostInADay, avgConsumptionSeconds, avgPerDay, favoriteDay };
 }
 
 // ── Cumulative consumption series (Profile line chart) ───────────────────────
 // Running total of dogs eaten for one contestant, day by day, from the season
 // start through today (Pacific Time) — a monotonically increasing line.
-const SEASON_START_PT = "2026-05-01";
 
 function computeDailySeries(entries, name) {
   const mine = entries.filter(e => e.name.toLowerCase() === name.toLowerCase());
@@ -1090,6 +1127,9 @@ export default function HotdogTracker() {
   const profileStats = authedName ? computeUserStats(contestEntries, authedName) : null;
   const profileDailySeries = authedName ? computeDailySeries(contestEntries, authedName) : null;
   const profileAvgOthersSeries = authedName ? computeAverageOthersSeries(contestEntries, authedName) : null;
+  const myRank = authedName
+    ? standings.findIndex(s => s.name.toLowerCase() === authedName.toLowerCase()) + 1
+    : 0;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -1504,13 +1544,26 @@ export default function HotdogTracker() {
                 <p className="ds-empty">Log a dog first to see your profile! 🌭</p>
               ) : (
                 <>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <Avatar name={authedName} src={avatarByName[authedName]} size="lg" />
-                    <span className="ds-welcome">{authedName}</span>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <Avatar name={authedName} src={avatarByName[authedName]} size="lg" />
+                      <span className="ds-welcome">{authedName}</span>
+                    </div>
+                    {myRank > 0 && (
+                      <span style={{
+                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontWeight: 600,
+                        fontSize:   "20px",
+                        color:      "var(--text\\/secondary, #727272)",
+                        flexShrink: 0,
+                      }}>
+                        {formatOrdinal(myRank)} place
+                      </span>
+                    )}
                   </div>
 
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                    <StatTile icon="🌭" value={profileStats.totalDogs} label="Total dogs eaten" />
+                    <StatTile icon="🌭" value={profileStats.rawTotalDogs} label="dogs eaten (raw value)" />
                     <StatTile icon="🔥" value={profileStats.longestStreak} label="Longest streak" />
                     <StatTile icon="😋" value={profileStats.mostInADay} label="Most in a day" />
                     <StatTile icon="⏱️" value={formatDuration(profileStats.avgConsumptionSeconds)} label="Avg consumption time" />
@@ -1523,6 +1576,8 @@ export default function HotdogTracker() {
                       color={darkenAvatarColor(authedName)}
                       style={{ gridColumn: "1 / -1" }}
                     />
+                    <StatTile value={profileStats.avgPerDay.toFixed(1)} label="Dogs per day avg" />
+                    <StatTile value={profileStats.favoriteDay ?? "—"} label="Favorite day to eat" />
                   </div>
                 </>
               )}
