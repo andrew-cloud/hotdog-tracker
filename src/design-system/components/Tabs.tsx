@@ -81,7 +81,7 @@ function getLabelColor(variant: TabVariant, state: TabState): string {
   if (state === "hover")    return "var(--component\\/tab-text-hover, #f0ede6)";
   if (state === "active") {
     return (variant === "pointing" || variant === "secondary-pointing")
-      ? "var(--component\\/tab-indicator, #e8a44a)"
+      ? "var(--component\\/tab-indicator, #A30003)"
       : "var(--component\\/tab-text-active, #f0ede6)";
   }
   return "var(--component\\/tab-text-default, #727272)";
@@ -183,7 +183,7 @@ export function TabItem({
 
       {showIndicator && (
         <div style={{
-          background:   "var(--component\\/tab-indicator, #e8a44a)",
+          background:   "var(--component\\/tab-indicator, #A30003)",
           height:       indicatorH,
           borderRadius: indicatorR,
           flexShrink:   0,

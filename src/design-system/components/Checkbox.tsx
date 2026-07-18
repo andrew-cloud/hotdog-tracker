@@ -46,7 +46,7 @@ export default function Checkbox({
     justifyContent: "center",
     overflow:       "hidden",
     background:     isFilled
-      ? "var(--brand\\/amber, #e8a44a)"
+      ? "var(--brand\\/amber, #A30003)"
       : isDisabled
       ? "var(--surface\\/bg-primary, #101010)"
       : "var(--surface\\/bg-tertiary, #212121)",

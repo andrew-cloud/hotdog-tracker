@@ -252,13 +252,13 @@ body {
 }
 
 .ds-mood-btn:hover {
-  border-color: var(--brand\/orange, #F06705);
-  background: rgba(240, 103, 5, 0.08);
+  border-color: var(--brand\/orange, #A30003);
+  background: rgba(163, 0, 3, 0.08);
 }
 
 .ds-mood-btn--selected {
-  border-color: var(--brand\/orange, #F06705);
-  background: rgba(240, 103, 5, 0.15);
+  border-color: var(--brand\/orange, #A30003);
+  background: rgba(163, 0, 3, 0.15);
   transform: scale(1.08);
 }
 
@@ -311,7 +311,7 @@ body {
   font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 500;
-  color: #e8a44a;
+  color: #A30003;
   white-space: nowrap;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;  /* prevents width jumping as digits change */

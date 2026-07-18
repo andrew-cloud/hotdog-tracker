@@ -424,7 +424,20 @@ export default function HotdogTracker() {
   const [step, setStep] = useState("auth"); // "auth" | "entry"
 
   // Auth state
-  const [selectedName, setSelectedName] = useState("");
+  const [selectedName, setSelectedName] = useState(() => {
+    // Restore last-selected contestant so a single-user phone doesn't have
+    // to reselect their name on every visit — only the PIN is still required.
+    return localStorage.getItem("hds-selected-name") || "";
+  });
+
+  // Persist contestant selection whenever it changes
+  useEffect(() => {
+    if (selectedName) {
+      localStorage.setItem("hds-selected-name", selectedName);
+    } else {
+      localStorage.removeItem("hds-selected-name");
+    }
+  }, [selectedName]);
   const [customName, setCustomName] = useState("");
   const [loginPin, setLoginPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -820,7 +833,10 @@ export default function HotdogTracker() {
       }
       setAuthedName(activeName);
       setStep("entry");
-      setSelectedName("");
+      // Persist the resolved name (not the raw dropdown value) so a "New
+      // contestant" selection becomes their real name for next time, instead
+      // of re-prompting the new-contestant flow on the next visit.
+      setSelectedName(activeName);
       setCustomName("");
       setLoginPin("");
       setConfirmPin("");
@@ -1088,7 +1104,7 @@ export default function HotdogTracker() {
                         title="When did you chow down?"
                         subtitle={crossesMonth}
                         description="This date is in a past month — it won't affect that month's champion."
-                        descriptionColor="var(--semantic\\/warning, #e8a44a)"
+                        descriptionColor="var(--semantic\\/warning, #A30003)"
                       >
                         <RadioGroup
                           name="daysAgo"

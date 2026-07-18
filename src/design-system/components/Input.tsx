@@ -40,7 +40,7 @@ const FIELD_BG: Record<InputState, string> = {
 
 const FIELD_BORDER: Record<InputState, string> = {
   default:  "1px solid var(--component\\/input-border, #E4D6C7)",
-  focus:    "2px solid var(--component\\/input-border-focus, #F06705)",
+  focus:    "2px solid var(--component\\/input-border-focus, #A30003)",
   filled:   "1px solid var(--component\\/input-border, #E4D6C7)",
   error:    "1px solid var(--component\\/input-border-error, #e85c5c)",
   success:  "1px solid var(--component\\/input-border-success, #5bba6f)",

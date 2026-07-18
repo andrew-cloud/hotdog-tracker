@@ -35,7 +35,7 @@ const FIELD_BG: Record<TextareaState, string> = {
 
 const FIELD_BORDER: Record<TextareaState, string> = {
   default:  "1px solid var(--component\\/input-border, #E4D6C7)",
-  focus:    "2px solid var(--component\\/input-border-focus, #F06705)",
+  focus:    "2px solid var(--component\\/input-border-focus, #A30003)",
   filled:   "1px solid var(--component\\/input-border, #E4D6C7)",
   error:    "1px solid var(--component\\/input-border-error, #e85c5c)",
   success:  "1px solid var(--component\\/input-border-success, #5bba6f)",
@@ -179,7 +179,7 @@ export default function Textarea({
         const color   = pct >= 0.95
           ? "var(--semantic\\/danger, #e85c5c)"
           : pct >= 0.8
-          ? "var(--brand\\/orange, #F06705)"
+          ? "var(--brand\\/orange, #A30003)"
           : "var(--text\\/tertiary, #727272)";
         return (
           <p style={{

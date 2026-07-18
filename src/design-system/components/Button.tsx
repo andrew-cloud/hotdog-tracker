@@ -59,9 +59,9 @@ interface StyleCfg {
 
 const STYLE_CFG: Record<ButtonStyle, StyleCfg> = {
   primary: {
-    bg:      "var(--component\\/btn-primary-bg, #F06705)",
-    bgHover: "var(--component\\/btn-primary-bg-hover, #D65C04)",
-    color:   "var(--component\\/btn-primary-text, #121212)",
+    bg:      "var(--component\\/btn-primary-bg, #A30003)",
+    bgHover: "var(--component\\/btn-primary-bg-hover, #770305)",
+    color:   "var(--component\\/btn-primary-text, #f0ede6)",
   },
   secondary: {
     bg:      "var(--component\\/btn-secondary-bg, #212121)",

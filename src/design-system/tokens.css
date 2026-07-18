@@ -43,16 +43,19 @@
   --prim-neutral-cream: #f0ede6;  /* warm off-white, light text on dark */
   --prim-neutral-ink:   #1a1918;  /* warm near-black, dark text on light */
 
-  /* Amber */
-  --prim-amber-400:         #e8a44a;
-  --prim-amber-500:         #c4853a;
-  --prim-amber-600:         #a06828;
-  --prim-amber-subtle-dark: #2a1e08;
-  --prim-amber-subtle-light:#fdf3e3;
+  /* Amber — primary accent ramp, rebuilt around #A30003 (deep crimson).
+     Token names kept as "amber" to avoid a wider rename; the hue itself
+     is now red, not amber. */
+  --prim-amber-400:         #A30003;
+  --prim-amber-500:         #770305;
+  --prim-amber-600:         #520406;
+  --prim-amber-subtle-dark: #210809;
+  --prim-amber-subtle-light:#fbe9ea;
 
-  /* Orange — new primary accent for the light form-field/button system */
-  --prim-orange-500: #F06705;
-  --prim-orange-600: #D65C04; /* hover/pressed */
+  /* Orange — primary accent for the light form-field/button system,
+     unified with the amber ramp's new base (#A30003 / #770305) */
+  --prim-orange-500: #A30003;
+  --prim-orange-600: #770305; /* hover/pressed */
 
   /* Green */
   --prim-green-400:         #5bba6f;
@@ -200,7 +203,7 @@
   /* ── Buttons ─────────────────────────────────────────── */
   --component\/btn-primary-bg:       var(--brand\/orange);
   --component\/btn-primary-bg-hover: var(--brand\/orange-hover);
-  --component\/btn-primary-text:     #121212; /* raw — dark ink reads with higher contrast than white against the #F06705 fill; text/primary aliases the dark-mode cream color and is shared with tabs, so can't be reused here */
+  --component\/btn-primary-text:     #f0ede6; /* raw — light ink reads with higher contrast than dark against the #A30003 fill; text/primary aliases the dark-mode cream color and is shared with tabs, so can't be reused here */
   --component\/btn-secondary-bg:     var(--surface\/bg-tertiary);
   --component\/btn-secondary-text:   var(--text\/primary);
   --component\/btn-secondary-border: var(--border\/strong);

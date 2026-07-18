@@ -61,7 +61,7 @@ function LoadingContent({ progress = 0, onRetry, onResubmit }: { progress?: numb
         fontSize:   "16px",
         fontWeight: 600,
         lineHeight: "22px",
-        color:      "var(--brand\\/amber, #e8a44a)",
+        color:      "var(--brand\\/amber, #A30003)",
         whiteSpace: "nowrap",
       }}>
         Processing GIF…
@@ -79,7 +79,7 @@ function LoadingContent({ progress = 0, onRetry, onResubmit }: { progress?: numb
           width:        `${Math.min(Math.max(progress, 0), 100)}%`,
           height:       "100%",
           borderRadius: "2px",
-          background:   "var(--brand\\/amber, #e8a44a)",
+          background:   "var(--brand\\/amber, #A30003)",
           transition:   "width 0.3s ease",
         }} />
       </div>
@@ -356,18 +356,10 @@ export default function GifTile({
         )}
       </div>
 
-      {/* Divider + Metadata — in the default state, name/avatar, count, date/time,
-          and mood now all live as overlays on the GIF itself, so this footer
+      {/* Metadata — in the default state, name/avatar, count, date/time, and
+          mood now all live as overlays on the GIF itself, so this footer
           only exists when there's a note to show below it */}
       {(isLoading || notes) && (
-      <>
-      <div style={{
-        flexShrink: 0,
-        width:      "100%",
-        height:     "1px",
-        background: "var(--component\\/card-header-border, #EEE4DF)",
-      }} />
-
       <div style={{
         display:       "flex",
         flexDirection: "column",
@@ -425,7 +417,7 @@ export default function GifTile({
                   fontSize:   "16px",
                   fontWeight: 600,
                   lineHeight: "26px",
-                  color:      "var(--brand\\/amber, #e8a44a)",
+                  color:      "var(--brand\\/amber, #A30003)",
                   whiteSpace: "nowrap",
                 }}>
                   +{count}
@@ -465,7 +457,6 @@ export default function GifTile({
           </>
         )}
       </div>
-      </>
       )}
     </div>
   );

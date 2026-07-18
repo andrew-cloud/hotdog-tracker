@@ -38,8 +38,8 @@ function StepperButton({ char, disabled = false, onClick, ariaLabel }: StepperBu
   const [hovered, setHovered] = useState(false);
 
   const bg = (!disabled && hovered)
-    ? "var(--component\\/btn-primary-bg-hover, #c4853a)"
-    : "var(--component\\/btn-primary-bg, #e8a44a)";
+    ? "var(--component\\/btn-primary-bg-hover, #770305)"
+    : "var(--component\\/btn-primary-bg, #A30003)";
 
   return (
     <button
@@ -69,7 +69,7 @@ function StepperButton({ char, disabled = false, onClick, ariaLabel }: StepperBu
         fontSize:      "18px",
         fontWeight:    700,
         lineHeight:    "20px",
-        color:         "var(--surface\\/bg-primary, #101010)",
+        color:         "var(--text\\/primary, #f0ede6)", // cream — contrast against the dark #A30003 button fill
         userSelect:    "none",
         pointerEvents: "none",
       }}>

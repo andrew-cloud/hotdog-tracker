@@ -26,14 +26,14 @@ const BG: Record<ToastType, string> = {
 const BAR: Record<ToastType, string> = {
   info:    "var(--component\\/toast-bar-info, #5b9ee8)",
   success: "var(--component\\/toast-bar-success, #5bba6f)",
-  warning: "var(--component\\/toast-bar-warning, #e8a44a)",
+  warning: "var(--component\\/toast-bar-warning, #A30003)",
   error:   "var(--component\\/toast-bar-error, #e85c5c)",
 };
 
 const ICON_COLOR: Record<ToastType, string> = {
   info:    "var(--semantic\\/info, #5b9ee8)",
   success: "var(--semantic\\/success, #5bba6f)",
-  warning: "var(--semantic\\/warning, #e8a44a)",
+  warning: "var(--semantic\\/warning, #A30003)",
   error:   "var(--semantic\\/danger, #e85c5c)",
 };
 

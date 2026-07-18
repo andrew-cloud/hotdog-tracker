@@ -43,9 +43,9 @@ const ZONE_BG: Record<UploadFieldState, string> = {
 
 const BORDER_COLOR: Record<UploadFieldState, string> = {
   default:   "var(--component\\/upload-border-default, #E4D6C7)",
-  hover:     "var(--component\\/upload-border-hover, #F06705)",
-  selected:  "var(--component\\/upload-border-hover, #F06705)",
-  uploading: "var(--component\\/upload-border-hover, #F06705)",
+  hover:     "var(--component\\/upload-border-hover, #A30003)",
+  selected:  "var(--component\\/upload-border-hover, #A30003)",
+  uploading: "var(--component\\/upload-border-hover, #A30003)",
   filled:    "var(--component\\/upload-border-success, #5bba6f)",
   error:     "var(--component\\/upload-border-error, #e85c5c)",
 };
@@ -54,7 +54,7 @@ const LABEL_COLOR: Record<UploadFieldState, string> = {
   default:   "var(--text\\/secondary, #727272)",
   hover:     "var(--component\\/upload-text, #121212)",
   selected:  "var(--component\\/upload-text, #121212)",
-  uploading: "var(--brand\\/orange, #F06705)",
+  uploading: "var(--brand\\/orange, #A30003)",
   filled:    "var(--component\\/upload-text, #121212)",
   error:     "var(--semantic\\/danger, #e85c5c)",
 };
@@ -62,7 +62,7 @@ const LABEL_COLOR: Record<UploadFieldState, string> = {
 const SUBLABEL_COLOR: Record<UploadFieldState, string> = {
   default:   "var(--text\\/tertiary, #727272)",
   hover:     "var(--text\\/secondary, #727272)",
-  selected:  "var(--brand\\/orange, #F06705)",
+  selected:  "var(--brand\\/orange, #A30003)",
   uploading: "var(--text\\/tertiary, #727272)",
   filled:    "var(--semantic\\/success, #5bba6f)",
   error:     "var(--text\\/tertiary, #727272)",
@@ -250,7 +250,7 @@ export default function UploadField({
               width:        `${Math.min(Math.max(progress, 0), 100)}%`,
               height:       "100%",
               borderRadius: "2px",
-              background:   "var(--brand\\/orange, #F06705)",
+              background:   "var(--brand\\/orange, #A30003)",
               transition:   "width 0.3s ease",
             }} />
           </div>

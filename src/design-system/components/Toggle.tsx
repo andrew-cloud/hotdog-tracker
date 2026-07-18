@@ -43,7 +43,7 @@ export default function Toggle({
     height:       "22px",
     borderRadius: "11px",
     background:   isOn
-      ? "var(--brand\\/amber, #e8a44a)"
+      ? "var(--brand\\/amber, #A30003)"
       : "var(--surface\\/bg-tertiary, #212121)",
     border:       isOn
       ? "none"

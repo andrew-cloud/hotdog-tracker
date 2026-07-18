@@ -44,7 +44,7 @@ export default function Radio({
     justifyContent: "center",
     background:     "transparent",
     border:         isSelected
-      ? "2px solid var(--brand\\/orange, #F06705)"
+      ? "2px solid var(--brand\\/orange, #A30003)"
       : isDisabled
       ? "1px solid var(--component\\/input-border, #E4D6C7)"
       : "1px solid var(--component\\/input-border, #E4D6C7)",
@@ -55,7 +55,7 @@ export default function Radio({
     width:        "8px",
     height:       "8px",
     borderRadius: "50%",
-    background:   "var(--brand\\/orange, #F06705)",
+    background:   "var(--brand\\/orange, #A30003)",
     flexShrink:   0,
   };
 
