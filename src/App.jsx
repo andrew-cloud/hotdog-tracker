@@ -342,7 +342,7 @@ function getCountdown(now) {
   const hours   = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-  if (days >= 1) return `${days}d ${hours}h`;
+  if (days >= 1) return `${days}d ${hours}h ${minutes}m`;
   return `${hours}h ${minutes}m ${seconds}s`;
 }
 
