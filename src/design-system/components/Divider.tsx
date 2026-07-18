@@ -14,7 +14,7 @@ export interface DividerProps {
 
 export default function Divider({
   orientation = "horizontal",
-  color       = "var(--border\\/default, #2e2e40)",
+  color       = "var(--border\\/default, #343434)",
   className,
   style,
 }: DividerProps) {

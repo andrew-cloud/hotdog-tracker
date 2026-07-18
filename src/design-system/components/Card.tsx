@@ -16,6 +16,8 @@ export interface CardProps {
   title?:     string;
   /** Header subtitle text */
   description?: string;
+  /** Override the subtitle's text color (defaults to text/secondary) */
+  descriptionColor?: string;
   /** Content slot — accepts any React node */
   children?:  React.ReactNode;
   className?: string;
@@ -30,23 +32,20 @@ const PADDING: Record<CardSize, string> = {
   lg: "28px",
 };
 
+// Vertical rhythm stays smaller than the body, but horizontal padding
+// matches PADDING[size] so header and content align on the same edges.
 const HEADER_PADDING: Record<CardSize, string> = {
-  sm: "12px",
-  md: "16px",
-  lg: "20px",
+  sm: `12px ${PADDING.sm}`,
+  md: `16px ${PADDING.md}`,
+  lg: `20px ${PADDING.lg}`,
 };
 
 const RADIUS: Record<CardSize, string> = {
-  sm: "var(--radius\\/md, 6px)",
-  md: "var(--radius\\/lg, 10px)",
-  lg: "var(--radius\\/xl, 16px)",
+  sm: "var(--component\\/card-radius, 24px)",
+  md: "var(--component\\/card-radius, 24px)",
+  lg: "var(--component\\/card-radius, 24px)",
 };
 
-const TITLE_SIZE: Record<CardSize, string> = {
-  sm: "14px",
-  md: "16px",
-  lg: "18px",
-};
 
 const TITLE_LINE_HEIGHT: Record<CardSize, string> = {
   sm: "20px",
@@ -83,20 +82,21 @@ function getCardStyle(variant: CardVariant, size: CardSize): React.CSSProperties
     case "default":
       return {
         ...base,
-        background:  "var(--component\\/card-bg, #16161d)",
-        border:      "1px solid var(--component\\/card-border, #2e2e40)",
+        background:  "rgba(250, 249, 246, 0.95)", // raw — 95%-opacity fill, no border (matches .ds-card / GifTile)
+        border:      "none",
         boxShadow:   "0px 4px 16px 0px rgba(0,0,0,0.20)",
       };
     case "elevated":
       return {
         ...base,
-        background: "var(--component\\/card-bg-elevated, #1e1e28)",
+        background: "rgba(250, 249, 246, 0.95)", // raw — same treatment as default; kept as a distinct variant name for future flexibility
+        border:     "none",
         boxShadow:  "0px 4px 16px 0px rgba(0,0,0,0.20)",
       };
     case "outlined":
       return {
         ...base,
-        border: "1px solid var(--component\\/card-border, #2e2e40)",
+        border: "1px solid var(--component\\/card-border, #343434)",
       };
     case "ghost":
       return base;
@@ -116,7 +116,7 @@ function getHeaderStyle(variant: CardVariant, size: CardSize): React.CSSProperti
     flexShrink:    0,
     width:         "100%",
     padding:       HEADER_PADDING[size],
-    borderBottom:  "1px solid var(--component\\/card-header-border, #2e2e40)",
+    borderBottom:  "1px solid var(--component\\/card-header-border, #EEE4DF)",
   };
 
   switch (variant) {
@@ -124,7 +124,7 @@ function getHeaderStyle(variant: CardVariant, size: CardSize): React.CSSProperti
     case "elevated":
       return {
         ...base,
-        background: "var(--component\\/card-header-bg, #1e1e28)",
+        background: "var(--component\\/card-header-bg, transparent)",
       };
     case "outlined":
     case "ghost":
@@ -145,7 +145,7 @@ function CardSlotPlaceholder() {
         width:          "100%",
         height:         "48px",
         flexShrink:     0,
-        border:         "1px solid #3a3a52",
+        border:         "1px solid #424242",
         borderRadius:   "4px",
       }}
     >
@@ -154,7 +154,7 @@ function CardSlotPlaceholder() {
           fontFamily: "Inter, sans-serif",
           fontSize:   "12px",
           fontWeight: 400,
-          color:      "#6b6882",
+          color:      "#727272",
           whiteSpace: "nowrap",
         }}
       >
@@ -173,6 +173,7 @@ export default function Card({
   subtitle    = true,
   title       = "Card title",
   description = "Supporting text or description",
+  descriptionColor,
   children,
   className,
   style,
@@ -187,14 +188,16 @@ export default function Card({
         <div style={getHeaderStyle(variant, size)}>
           <p
             style={{
-              fontFamily:  "Inter, sans-serif",
-              fontSize:    TITLE_SIZE[size],
-              fontWeight:  600,
-              lineHeight:  TITLE_LINE_HEIGHT[size],
-              color:       "var(--text\\/primary, #f0ede6)",
-              width:       "100%",
-              margin:      0,
-              flexShrink:  0,
+              fontFamily:    "'Space Grotesk', sans-serif",
+              fontSize:      "14px",
+              fontWeight:    800,
+              lineHeight:    TITLE_LINE_HEIGHT[size],
+              color:         "#121212",
+              width:         "100%",
+              margin:        0,
+              flexShrink:    0,
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
             }}
           >
             {title}
@@ -203,11 +206,11 @@ export default function Card({
           {subtitle && (
             <p
               style={{
-                fontFamily: "Inter, sans-serif",
+                fontFamily: "'Space Grotesk', sans-serif",
                 fontSize:   SUBTITLE_SIZE[size],
-                fontWeight: 400,
+                fontWeight: 500, // lighter than the 800-weight title, lightest weight available for Space Grotesk
                 lineHeight: SUBTITLE_LINE_HEIGHT[size],
-                color:      "var(--text\\/secondary, #9e9bb4)",
+                color:      descriptionColor ?? "var(--text\\/secondary, #727272)",
                 width:      "100%",
                 margin:     0,
                 flexShrink: 0,
@@ -224,7 +227,7 @@ export default function Card({
         style={{
           display:       "flex",
           flexDirection: "column",
-          alignItems:    "flex-start",
+          alignItems:    "stretch", // stretch children to full card width (matches old .ds-card-body block behavior) — flex-start let percentage-width children (e.g. full-width buttons) collapse to content size
           minHeight:     "48px",
           overflow:      "hidden",
           position:      "relative",

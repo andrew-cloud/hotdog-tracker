@@ -25,39 +25,39 @@ export interface TextareaProps {
 // ── Token maps (mirrors Input component) ──────────────
 
 const FIELD_BG: Record<TextareaState, string> = {
-  default:  "var(--component\\/input-bg, #1e1e28)",
-  focus:    "var(--component\\/input-bg-focus, #16161d)",
-  filled:   "var(--component\\/input-bg, #1e1e28)",
-  error:    "var(--component\\/input-bg-error, #2a0808)",
-  success:  "var(--component\\/input-bg-success, #0a1f0d)",
-  disabled: "var(--surface\\/bg-primary, #0f0f13)",
+  default:  "var(--component\\/input-bg, #FFFFFF)",
+  focus:    "var(--component\\/input-bg-focus, #FFFFFF)",
+  filled:   "var(--component\\/input-bg, #FFFFFF)",
+  error:    "var(--component\\/input-bg-error, #FDEAEA)",
+  success:  "var(--component\\/input-bg-success, #EAF6EC)",
+  disabled: "var(--component\\/input-bg, #FFFFFF)",
 };
 
 const FIELD_BORDER: Record<TextareaState, string> = {
-  default:  "1px solid var(--component\\/input-border, #3a3a52)",
-  focus:    "2px solid var(--component\\/input-border-focus, #e8a44a)",
-  filled:   "1px solid var(--component\\/input-border, #3a3a52)",
+  default:  "1px solid var(--component\\/input-border, #E4D6C7)",
+  focus:    "2px solid var(--component\\/input-border-focus, #F06705)",
+  filled:   "1px solid var(--component\\/input-border, #E4D6C7)",
   error:    "1px solid var(--component\\/input-border-error, #e85c5c)",
   success:  "1px solid var(--component\\/input-border-success, #5bba6f)",
-  disabled: "1px solid var(--surface\\/border-default, #2e2e40)",
+  disabled: "1px solid var(--component\\/input-border, #E4D6C7)",
 };
 
 const VALUE_COLOR: Record<TextareaState, string> = {
-  default:  "var(--text\\/primary, #f0ede6)",
-  focus:    "var(--text\\/primary, #f0ede6)",
-  filled:   "var(--text\\/primary, #f0ede6)",
-  error:    "var(--text\\/primary, #f0ede6)",
-  success:  "var(--text\\/primary, #f0ede6)",
-  disabled: "var(--text\\/disabled, #4a4860)",
+  default:  "var(--component\\/input-text, #121212)",
+  focus:    "var(--component\\/input-text, #121212)",
+  filled:   "var(--component\\/input-text, #121212)",
+  error:    "var(--component\\/input-text, #121212)",
+  success:  "var(--component\\/input-text, #121212)",
+  disabled: "var(--text\\/disabled, #515151)",
 };
 
 const HINT_COLOR: Record<TextareaState, string> = {
-  default:  "var(--text\\/tertiary, #6b6882)",
-  focus:    "var(--text\\/tertiary, #6b6882)",
-  filled:   "var(--text\\/tertiary, #6b6882)",
+  default:  "var(--text\\/tertiary, #727272)",
+  focus:    "var(--text\\/tertiary, #727272)",
+  filled:   "var(--text\\/tertiary, #727272)",
   error:    "var(--semantic\\/danger, #e85c5c)",
   success:  "var(--semantic\\/success, #5bba6f)",
-  disabled: "var(--text\\/tertiary, #6b6882)",
+  disabled: "var(--text\\/tertiary, #727272)",
 };
 
 // 2 lines × 22px line-height = 44px (padding is on the wrapper)
@@ -112,11 +112,11 @@ export default function Textarea({
   };
 
   const labelStyle: React.CSSProperties = {
-    fontFamily: "Inter, sans-serif",
+    fontFamily: "'Space Grotesk', sans-serif",
     fontSize:   "16px",
     fontWeight: 600,
     lineHeight: "22px",
-    color:      "var(--text\\/secondary, #9e9bb4)",
+    color:      "var(--text\\/secondary, #727272)",
     width:      "100%",
     flexShrink: 0,
     margin:     0,
@@ -124,9 +124,9 @@ export default function Textarea({
 
   const textareaStyle: React.CSSProperties = {
     flex:        "1 0 0",
-    fontFamily:  "Inter, sans-serif",
+    fontFamily:  "'Space Grotesk', sans-serif",
     fontSize:    "16px",
-    fontWeight:  400,
+    fontWeight:  500,
     lineHeight:  "22px",
     minHeight:   `${MIN_TEXTAREA_H}px`,
     maxHeight:   `${MAX_TEXTAREA_H}px`,
@@ -142,9 +142,9 @@ export default function Textarea({
   };
 
   const hintStyle: React.CSSProperties = {
-    fontFamily: "Inter, sans-serif",
+    fontFamily: "'Space Grotesk', sans-serif",
     fontSize:   "16px",
-    fontWeight: 400,
+    fontWeight: 500,
     lineHeight: "22px",
     color:      HINT_COLOR[state],
     width:      "100%",
@@ -179,13 +179,13 @@ export default function Textarea({
         const color   = pct >= 0.95
           ? "var(--semantic\\/danger, #e85c5c)"
           : pct >= 0.8
-          ? "var(--brand\\/amber, #e8a44a)"
-          : "var(--text\\/tertiary, #6b6882)";
+          ? "var(--brand\\/orange, #F06705)"
+          : "var(--text\\/tertiary, #727272)";
         return (
           <p style={{
-            fontFamily: "Inter, sans-serif",
+            fontFamily: "'Space Grotesk', sans-serif",
             fontSize:   "13px",
-            fontWeight: 400,
+            fontWeight: 500,
             lineHeight: "18px",
             color,
             margin:     0,

@@ -25,20 +25,20 @@
 :root {
   /* Neutral scale */
   --prim-neutral-0:     #ffffff;
-  --prim-neutral-50:    #f5f4f0;
-  --prim-neutral-100:   #eceae4;
-  --prim-neutral-150:   #e2e0da;
-  --prim-neutral-200:   #d0cec8;
-  --prim-neutral-300:   #b8b6b0;
-  --prim-neutral-400:   #8a8898;
-  --prim-neutral-500:   #6b6882;
-  --prim-neutral-600:   #4a4860;
-  --prim-neutral-700:   #3a3a52;
-  --prim-neutral-800:   #2e2e40;
-  --prim-neutral-850:   #242432;
-  --prim-neutral-900:   #1e1e28;
-  --prim-neutral-950:   #16161d;
-  --prim-neutral-975:   #0f0f13;
+  --prim-neutral-50:    #f3f3f3;
+  --prim-neutral-100:   #e9e9e9;
+  --prim-neutral-150:   #dfdfdf;
+  --prim-neutral-200:   #cdcdcd;
+  --prim-neutral-300:   #b5b5b5;
+  --prim-neutral-400:   #8e8e8e;
+  --prim-neutral-500:   #727272;
+  --prim-neutral-600:   #515151;
+  --prim-neutral-700:   #424242;
+  --prim-neutral-800:   #343434;
+  --prim-neutral-850:   #292929;
+  --prim-neutral-900:   #212121;
+  --prim-neutral-950:   #181818;
+  --prim-neutral-975:   #101010;
   --prim-neutral-1000:  #000000;
   --prim-neutral-cream: #f0ede6;  /* warm off-white, light text on dark */
   --prim-neutral-ink:   #1a1918;  /* warm near-black, dark text on light */
@@ -49,6 +49,10 @@
   --prim-amber-600:         #a06828;
   --prim-amber-subtle-dark: #2a1e08;
   --prim-amber-subtle-light:#fdf3e3;
+
+  /* Orange — new primary accent for the light form-field/button system */
+  --prim-orange-500: #F06705;
+  --prim-orange-600: #D65C04; /* hover/pressed */
 
   /* Green */
   --prim-green-400:         #5bba6f;
@@ -90,6 +94,7 @@
 
 :root {
   /* Surface */
+  --surface\/bg-app:         #FFE548; /* flat accent — page/app background, not aliased to the neutral scale */
   --surface\/bg-primary:     var(--prim-neutral-975);
   --surface\/bg-secondary:   var(--prim-neutral-950);
   --surface\/bg-tertiary:    var(--prim-neutral-900);
@@ -109,6 +114,8 @@
   --brand\/amber:        var(--prim-amber-400);
   --brand\/amber-hover:  var(--prim-amber-500);
   --brand\/amber-subtle: var(--prim-amber-subtle-dark);
+  --brand\/orange:       var(--prim-orange-500); /* new primary accent — buttons, focus/active states */
+  --brand\/orange-hover: var(--prim-orange-600);
   --brand\/teal:         var(--prim-teal-400);
   --brand\/coral:        var(--prim-coral-400);
   --brand\/lavender:     var(--prim-lavender-400);
@@ -126,7 +133,7 @@
   /* Border intent — semantic aliases for border use cases */
   --border\/default: var(--surface\/border-default);
   --border\/strong:  var(--surface\/border-strong);
-  --border\/focus:   var(--brand\/amber);
+  --border\/focus:   var(--brand\/orange);
   --border\/error:   var(--semantic\/danger);
   --border\/success: var(--semantic\/success);
   --border\/warning: var(--semantic\/warning);
@@ -136,6 +143,7 @@
 /* Light mode override */
 [data-theme="light"] {
   /* Surface */
+  --surface\/bg-app:         #FFE548;
   --surface\/bg-primary:     var(--prim-neutral-0);
   --surface\/bg-secondary:   var(--prim-neutral-50);
   --surface\/bg-tertiary:    var(--prim-neutral-100);
@@ -155,6 +163,8 @@
   --brand\/amber:        var(--prim-amber-500);
   --brand\/amber-hover:  var(--prim-amber-600);
   --brand\/amber-subtle: var(--prim-amber-subtle-light);
+  --brand\/orange:       var(--prim-orange-500);
+  --brand\/orange-hover: var(--prim-orange-600);
   --brand\/teal:         var(--prim-teal-500);
   --brand\/coral:        var(--prim-coral-500);
   --brand\/lavender:     var(--prim-lavender-500);
@@ -172,7 +182,7 @@
   /* Border intent — inherit same structure, values swap via semantic layer */
   --border\/default: var(--surface\/border-default);
   --border\/strong:  var(--surface\/border-strong);
-  --border\/focus:   var(--brand\/amber);
+  --border\/focus:   var(--brand\/orange);
   --border\/error:   var(--semantic\/danger);
   --border\/success: var(--semantic\/success);
   --border\/warning: var(--semantic\/warning);
@@ -188,22 +198,23 @@
 
 :root {
   /* ── Buttons ─────────────────────────────────────────── */
-  --component\/btn-primary-bg:       var(--brand\/amber);
-  --component\/btn-primary-bg-hover: var(--brand\/amber-hover);
-  --component\/btn-primary-text:     var(--surface\/bg-primary);
+  --component\/btn-primary-bg:       var(--brand\/orange);
+  --component\/btn-primary-bg-hover: var(--brand\/orange-hover);
+  --component\/btn-primary-text:     #121212; /* raw — dark ink reads with higher contrast than white against the #F06705 fill; text/primary aliases the dark-mode cream color and is shared with tabs, so can't be reused here */
   --component\/btn-secondary-bg:     var(--surface\/bg-tertiary);
   --component\/btn-secondary-text:   var(--text\/primary);
   --component\/btn-secondary-border: var(--border\/strong);
 
   /* ── Inputs ──────────────────────────────────────────── */
-  --component\/input-bg:             var(--surface\/bg-tertiary);
-  --component\/input-bg-focus:       var(--surface\/bg-secondary);
-  --component\/input-border:         var(--border\/strong);
-  --component\/input-border-focus:   var(--border\/focus);
-  --component\/input-bg-error:       var(--semantic\/danger-subtle);
-  --component\/input-border-error:   var(--border\/error);
-  --component\/input-bg-success:     var(--semantic\/success-subtle);
-  --component\/input-border-success: var(--border\/success);
+  --component\/input-bg:             #FFFFFF; /* raw — clean white field fill against the cream card body, part of the new light form-field system */
+  --component\/input-bg-focus:       #FFFFFF; /* unchanged on focus — focus is communicated via border only */
+  --component\/input-border:         #E4D6C7; /* raw — soft warm tan-gray border, visible against both the white field and the cream card */
+  --component\/input-border-focus:   var(--border\/focus); /* now resolves to brand/orange */
+  --component\/input-bg-error:       #FDEAEA; /* raw — light red tint; was aliasing semantic/danger-subtle, a near-black dark-mode red that read as a black box on a light field */
+  --component\/input-border-error:   var(--border\/error); /* unchanged — #e85c5c already reads fine as a border on light fields */
+  --component\/input-bg-success:     #EAF6EC; /* raw — light green tint, same reasoning as bg-error */
+  --component\/input-border-success: var(--border\/success); /* unchanged */
+  --component\/input-text:           #121212; /* raw — dark ink for field values/selected text on the light field system (text/primary can't be reused — shared with tabs/buttons, aliases the dark-mode cream color) */
 
   /* ── Tabs ────────────────────────────────────────────── */
   --component\/tab-bg-default:    var(--surface\/bg-tertiary);
@@ -217,11 +228,14 @@
   --component\/tab-text-disabled: var(--text\/disabled);
 
   /* ── Cards ───────────────────────────────────────────── */
-  --component\/card-bg:            var(--surface\/bg-secondary);
-  --component\/card-bg-elevated:   var(--surface\/bg-tertiary);
-  --component\/card-border:        var(--border\/default);
-  --component\/card-header-bg:     var(--surface\/bg-tertiary);
-  --component\/card-header-border: var(--border\/default);
+  --component\/card-bg:            rgba(253, 243, 237, 0.90); /* raw — warm cream fill at 90% opacity, not aliased to the neutral scale */
+  --component\/card-bg-elevated:   rgba(253, 243, 237, 0.85);
+  --component\/card-fill-border:   rgba(250, 249, 246, 0.95); /* raw — 1px rim matching the fill hue at 95% opacity (default/elevated variants) */
+  --component\/card-border:        var(--border\/default); /* used by the outlined variant only */
+  --component\/card-radius:        24px; /* raw — flat radius for all card sizes, not aliased to the radius scale */
+  --component\/card-header-bg:     transparent; /* matches whatever the card's own fill is (card-bg / card-bg-elevated) */
+  --component\/card-header-border: var(--component\/card-divider); /* matches the row divider color, not border/default */
+  --component\/card-divider:       #EEE4DF; /* raw — subtle warm-gray rule for row dividers on the cream card fill, much lower contrast than border/default */
   --component\/card-shadow:        #000000; /* raw — shadows are always black */
 
   /* ── Toasts ──────────────────────────────────────────── */
@@ -237,10 +251,15 @@
   --component\/toast-close:        var(--text\/tertiary);
 
   /* ── Upload Field ────────────────────────────────────── */
-  --component\/upload-border-default: var(--border\/strong);
-  --component\/upload-border-hover:   var(--border\/focus);
+  --component\/upload-border-default: var(--component\/input-border); /* aliases the shared field border instead of border/strong (dark) */
+  --component\/upload-border-hover:   var(--border\/focus); /* brand/orange */
   --component\/upload-border-error:   var(--border\/error);
   --component\/upload-border-success: var(--border\/success);
+  --component\/upload-bg-default:     #FFFFFF; /* raw — matches input-bg */
+  --component\/upload-bg-hover:       #FDF6EF; /* raw — subtle warm tint distinguishing hover from static default */
+  --component\/upload-bg-success:     #EAF6EC; /* raw — matches input-bg-success */
+  --component\/upload-bg-error:       #FDEAEA; /* raw — matches input-bg-error */
+  --component\/upload-text:           #121212; /* raw — dark ink label text, mirrors input-text */
 }
 
 

@@ -33,39 +33,39 @@ export interface UploadFieldProps {
 // ── Token helpers ─────────────────────────────────────
 
 const ZONE_BG: Record<UploadFieldState, string> = {
-  default:   "var(--surface\\/bg-secondary, #16161d)",
-  hover:     "var(--surface\\/bg-surface, #242432)",
-  selected:  "var(--surface\\/bg-secondary, #16161d)",
-  uploading: "var(--surface\\/bg-secondary, #16161d)",
-  filled:    "var(--semantic\\/success-subtle, #0a1f0d)",
-  error:     "var(--semantic\\/danger-subtle, #2a0808)",
+  default:   "var(--component\\/upload-bg-default, #FFFFFF)",
+  hover:     "var(--component\\/upload-bg-hover, #FDF6EF)",
+  selected:  "var(--component\\/upload-bg-default, #FFFFFF)",
+  uploading: "var(--component\\/upload-bg-default, #FFFFFF)",
+  filled:    "var(--component\\/upload-bg-success, #EAF6EC)",
+  error:     "var(--component\\/upload-bg-error, #FDEAEA)",
 };
 
 const BORDER_COLOR: Record<UploadFieldState, string> = {
-  default:   "var(--surface\\/border-strong, #3a3a52)",
-  hover:     "var(--brand\\/amber, #e8a44a)",
-  selected:  "var(--brand\\/amber, #e8a44a)",
-  uploading: "var(--brand\\/amber, #e8a44a)",
-  filled:    "var(--semantic\\/success, #5bba6f)",
-  error:     "var(--semantic\\/danger, #e85c5c)",
+  default:   "var(--component\\/upload-border-default, #E4D6C7)",
+  hover:     "var(--component\\/upload-border-hover, #F06705)",
+  selected:  "var(--component\\/upload-border-hover, #F06705)",
+  uploading: "var(--component\\/upload-border-hover, #F06705)",
+  filled:    "var(--component\\/upload-border-success, #5bba6f)",
+  error:     "var(--component\\/upload-border-error, #e85c5c)",
 };
 
 const LABEL_COLOR: Record<UploadFieldState, string> = {
-  default:   "var(--text\\/secondary, #6b6882)",
-  hover:     "var(--text\\/primary, #f0ede6)",
-  selected:  "var(--text\\/primary, #f0ede6)",
-  uploading: "var(--brand\\/amber, #e8a44a)",
-  filled:    "var(--text\\/primary, #f0ede6)",
+  default:   "var(--text\\/secondary, #727272)",
+  hover:     "var(--component\\/upload-text, #121212)",
+  selected:  "var(--component\\/upload-text, #121212)",
+  uploading: "var(--brand\\/orange, #F06705)",
+  filled:    "var(--component\\/upload-text, #121212)",
   error:     "var(--semantic\\/danger, #e85c5c)",
 };
 
 const SUBLABEL_COLOR: Record<UploadFieldState, string> = {
-  default:   "var(--text\\/tertiary, #6b6882)",
-  hover:     "var(--text\\/secondary, #6b6882)",
-  selected:  "var(--brand\\/amber, #e8a44a)",
-  uploading: "var(--text\\/tertiary, #6b6882)",
+  default:   "var(--text\\/tertiary, #727272)",
+  hover:     "var(--text\\/secondary, #727272)",
+  selected:  "var(--brand\\/orange, #F06705)",
+  uploading: "var(--text\\/tertiary, #727272)",
   filled:    "var(--semantic\\/success, #5bba6f)",
-  error:     "var(--text\\/tertiary, #6b6882)",
+  error:     "var(--text\\/tertiary, #727272)",
 };
 
 // ── Icon ──────────────────────────────────────────────
@@ -78,7 +78,7 @@ function Icon({ state, icon = "📹" }: { state: UploadFieldState; icon?: string
         flexShrink: 0, width: "36px", height: "36px", borderRadius: "50%",
         background: "var(--semantic\\/success, #5bba6f)",
       }}>
-        <span style={{ fontFamily: "Inter, sans-serif", fontSize: "14px", fontWeight: 600, color: "var(--surface\\/bg-primary, #0f0f13)" }}>✓</span>
+        <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "14px", fontWeight: 600, color: "var(--surface\\/bg-primary, #101010)" }}>✓</span>
       </div>
     );
   }
@@ -89,7 +89,7 @@ function Icon({ state, icon = "📹" }: { state: UploadFieldState; icon?: string
         flexShrink: 0, width: "36px", height: "36px", borderRadius: "50%",
         background: "var(--semantic\\/danger, #e85c5c)",
       }}>
-        <span style={{ fontFamily: "Inter, sans-serif", fontSize: "14px", fontWeight: 600, color: "var(--surface\\/bg-primary, #0f0f13)" }}>✕</span>
+        <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: "14px", fontWeight: 600, color: "var(--surface\\/bg-primary, #101010)" }}>✕</span>
       </div>
     );
   }
@@ -214,7 +214,7 @@ export default function UploadField({
 
         {/* Primary label — wraps for long filenames */}
         <span style={{
-          fontFamily:  "Inter, sans-serif",
+          fontFamily:  "'Space Grotesk', sans-serif",
           fontSize:    "16px",
           fontWeight:  600,
           lineHeight:  "22px",
@@ -228,9 +228,9 @@ export default function UploadField({
 
         {/* Sublabel */}
         <span style={{
-          fontFamily: "Inter, sans-serif",
+          fontFamily: "'Space Grotesk', sans-serif",
           fontSize:   "16px",
-          fontWeight: 400,
+          fontWeight: 500,
           lineHeight: "22px",
           color:      SUBLABEL_COLOR[state],
           textAlign:  "center",
@@ -243,14 +243,14 @@ export default function UploadField({
         {state === "uploading" && (
           <div style={{
             width: "100%", height: "4px", borderRadius: "2px",
-            background: "var(--surface\\/border-default, #2e2e40)",
+            background: "var(--component\\/upload-border-default, #E4D6C7)",
             overflow: "hidden", flexShrink: 0,
           }}>
             <div style={{
               width:        `${Math.min(Math.max(progress, 0), 100)}%`,
               height:       "100%",
               borderRadius: "2px",
-              background:   "var(--brand\\/amber, #e8a44a)",
+              background:   "var(--brand\\/orange, #F06705)",
               transition:   "width 0.3s ease",
             }} />
           </div>

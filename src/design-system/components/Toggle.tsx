@@ -44,10 +44,10 @@ export default function Toggle({
     borderRadius: "11px",
     background:   isOn
       ? "var(--brand\\/amber, #e8a44a)"
-      : "var(--surface\\/bg-tertiary, #1e1e28)",
+      : "var(--surface\\/bg-tertiary, #212121)",
     border:       isOn
       ? "none"
-      : "1px solid var(--component\\/input-border, #3a3a52)",
+      : "1px solid var(--component\\/input-border, #424242)",
     boxSizing:    "border-box",
     transition:   "background 0.2s ease",
   };
@@ -70,7 +70,7 @@ export default function Toggle({
     fontWeight: 400,
     lineHeight: "20px",
     color:      isDisabled
-      ? "var(--text\\/disabled, #4a4860)"
+      ? "var(--text\\/disabled, #515151)"
       : "var(--text\\/secondary, #9e9bb4)",
     whiteSpace: "nowrap",
     userSelect: "none",

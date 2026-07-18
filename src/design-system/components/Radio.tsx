@@ -44,10 +44,10 @@ export default function Radio({
     justifyContent: "center",
     background:     "transparent",
     border:         isSelected
-      ? "2px solid var(--brand\\/amber, #e8a44a)"
+      ? "2px solid var(--brand\\/orange, #F06705)"
       : isDisabled
-      ? "1px solid var(--surface\\/border-default, #2e2e40)"
-      : "1px solid var(--component\\/input-border, #3a3a52)",
+      ? "1px solid var(--component\\/input-border, #E4D6C7)"
+      : "1px solid var(--component\\/input-border, #E4D6C7)",
     boxSizing: "border-box",
   };
 
@@ -55,20 +55,20 @@ export default function Radio({
     width:        "8px",
     height:       "8px",
     borderRadius: "50%",
-    background:   "var(--brand\\/amber, #e8a44a)",
+    background:   "var(--brand\\/orange, #F06705)",
     flexShrink:   0,
   };
 
   const labelStyle: React.CSSProperties = {
-    fontFamily: "Inter, sans-serif",
+    fontFamily: "'Space Grotesk', sans-serif",
     fontSize:   "16px",
-    fontWeight: 400,
+    fontWeight: 500,
     lineHeight: "22px",
     color:      isDisabled
-      ? "var(--text\\/disabled, #4a4860)"
+      ? "var(--text\\/disabled, #515151)"
       : isSelected
-      ? "var(--text\\/primary, #f0ede6)"
-      : "var(--text\\/secondary, #9e9bb4)",
+      ? "var(--component\\/input-text, #121212)"
+      : "var(--text\\/secondary, #727272)",
     whiteSpace: "nowrap",
     userSelect: "none",
   };

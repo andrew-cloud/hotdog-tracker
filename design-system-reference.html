@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hot Dog DS — Design System Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* ── Tokens ──────────────────────────────────────────────────────────── */
+:root {
+  --prim-neutral-0:     #ffffff;
+  --prim-neutral-50:    #f3f3f3;
+  --prim-neutral-100:   #e9e9e9;
+  --prim-neutral-200:   #cdcdcd;
+  --prim-neutral-300:   #b5b5b5;
+  --prim-neutral-400:   #8e8e8e;
+  --prim-neutral-500:   #727272;
+  --prim-neutral-600:   #515151;
+  --prim-neutral-700:   #424242;
+  --prim-neutral-800:   #343434;
+  --prim-neutral-850:   #292929;
+  --prim-neutral-900:   #212121;
+  --prim-neutral-950:   #181818;
+  --prim-neutral-975:   #101010;
+  --prim-neutral-1000:  #000000;
+  --prim-neutral-cream: #f0ede6;
+  --prim-neutral-ink:   #1a1918;
+  --prim-amber-400:     #e8a44a;
+  --prim-amber-500:     #c4853a;
+  --prim-amber-600:     #a06828;
+  --prim-green-400:     #5bba6f;
+  --prim-green-500:     #2e8b3f;
+  --prim-red-400:       #e85c5c;
+  --prim-red-500:       #c43030;
+  --prim-blue-400:      #5b9ee8;
+  --prim-blue-500:      #2266c4;
+  --prim-teal-400:      #4ecdc4;
+  --prim-teal-500:      #1a9e95;
+  --prim-coral-400:     #e8734a;
+  --prim-coral-500:     #c4542a;
+  --prim-lavender-400:  #9b8ec4;
+  --prim-lavender-500:  #6d5fa0;
+
+  --surface-bg-primary:   #101010;
+  --surface-bg-secondary: #181818;
+  --surface-bg-tertiary:  #212121;
+  --surface-bg-surface:   #292929;
+  --surface-border:       #343434;
+  --surface-border-strong:#424242;
+  --text-primary:   #f0ede6;
+  --text-secondary: #727272;
+  --text-tertiary:  #727272;
+  --text-disabled:  #515151;
+  --brand-amber:    #e8a44a;
+  --brand-teal:     #4ecdc4;
+  --brand-coral:    #e8734a;
+  --brand-lavender: #9b8ec4;
+
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 24px;
+  --spacing-6: 32px;
+  --spacing-7: 48px;
+  --spacing-8: 64px;
+  --spacing-9: 96px;
+}
+
+/* ── Reset + Base ────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--surface-bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────── */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0;
+  width: 220px;
+  height: 100vh;
+  background: var(--surface-bg-secondary);
+  border-right: 1px solid var(--surface-border);
+  padding: 32px 0;
+  overflow-y: auto;
+  z-index: 100;
+}
+.sidebar-logo {
+  padding: 0 20px 24px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand-amber);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--surface-border);
+  margin-bottom: 16px;
+}
+.sidebar a {
+  display: block;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+  border-radius: 0;
+}
+.sidebar a:hover { color: var(--text-primary); background: var(--surface-bg-surface); }
+.sidebar .nav-section {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-disabled);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 16px 20px 6px;
+}
+.main {
+  margin-left: 220px;
+  padding: 48px 56px;
+  max-width: 1100px;
+}
+
+/* ── Section ─────────────────────────────────────────────────────────── */
+.section { margin-bottom: 72px; }
+.section-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.section-sub {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+}
+.subsection { margin-bottom: 40px; }
+.subsection-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-disabled);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+/* ── Color swatches ──────────────────────────────────────────────────── */
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px;
+}
+.swatch {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--surface-border);
+}
+.swatch-color {
+  height: 52px;
+}
+.swatch-info {
+  padding: 8px 10px;
+  background: var(--surface-bg-surface);
+}
+.swatch-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.swatch-value {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: 'Menlo', 'Monaco', monospace;
+}
+
+/* Semantic token rows */
+.token-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--surface-border);
+}
+.token-row:last-child { border-bottom: none; }
+.token-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.token-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-family: 'Menlo', 'Monaco', monospace;
+  flex: 1;
+}
+.token-alias {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: 'Menlo', 'Monaco', monospace;
+}
+.token-hex {
+  font-size: 12px;
+  color: var(--text-disabled);
+  font-family: 'Menlo', 'Monaco', monospace;
+  width: 72px;
+  text-align: right;
+}
+
+/* ── Typography ──────────────────────────────────────────────────────── */
+.type-row {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--surface-border);
+}
+.type-row:last-child { border-bottom: none; }
+.type-meta {
+  width: 200px;
+  flex-shrink: 0;
+}
+.type-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+.type-spec {
+  font-size: 11px;
+  color: var(--text-disabled);
+  font-family: 'Menlo','Monaco',monospace;
+}
+.type-sample { flex: 1; color: var(--text-primary); }
+
+/* ── Spacing ─────────────────────────────────────────────────────────── */
+.spacing-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--surface-border);
+}
+.spacing-row:last-child { border-bottom: none; }
+.spacing-bar-wrap { width: 200px; }
+.spacing-bar {
+  background: var(--brand-amber);
+  height: 16px;
+  border-radius: 2px;
+  opacity: 0.7;
+}
+.spacing-name {
+  font-size: 12px;
+  font-family: 'Menlo','Monaco',monospace;
+  color: var(--text-secondary);
+  width: 120px;
+}
+.spacing-value {
+  font-size: 12px;
+  color: var(--text-disabled);
+}
+
+.radius-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.radius-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.radius-box {
+  width: 56px;
+  height: 56px;
+  background: var(--surface-bg-surface);
+  border: 2px solid var(--brand-amber);
+}
+.radius-label {
+  font-size: 11px;
+  font-family: 'Menlo','Monaco',monospace;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* ── Components ──────────────────────────────────────────────────────── */
+.component-canvas {
+  background: var(--surface-bg-tertiary);
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  padding: 32px;
+  margin-bottom: 12px;
+}
+.component-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.component-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Button component ────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, opacity 0.15s;
+}
+.btn-primary   { background: #F06705; color: #121212; }
+.btn-secondary { background: #212121; color: #f0ede6; border: 1px solid #424242; }
+.btn-positive  { background: #5bba6f; color: #0d2112; }
+.btn-negative  { background: #e85c5c; color: #210d0d; }
+.btn-basic     { background: transparent; color: #727272; border: 1px solid #424242; }
+.btn-info      { background: #5b9ee8; color: #0d1f33; }
+.btn-disabled  { opacity: 0.40; cursor: not-allowed; }
+.btn-mini   { padding: 4px 8px;   font-size: 11px; line-height: 15px; }
+.btn-small  { padding: 6px 12px;  font-size: 12px; line-height: 16px; }
+.btn-medium { padding: 9px 16px;  font-size: 14px; line-height: 20px; }
+.btn-large  { padding: 11px 20px; font-size: 16px; line-height: 22px; }
+.btn-big    { padding: 13px 24px; font-size: 18px; line-height: 26px; }
+
+/* ── Avatar component ────────────────────────────────────────────────── */
+.avatar {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-weight: 600;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ── Input component ─────────────────────────────────────────────────── */
+.input-wrap { display: flex; flex-direction: column; gap: 6px; width: 240px; }
+.input-label { font-size: 16px; font-weight: 600; color: #727272; }
+.input-field {
+  padding: 12px;
+  border-radius: 6px;
+  background: #FFFFFF;
+  border: 1px solid #E4D6C7;
+  color: #121212;
+  font-size: 16px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  width: 100%;
+}
+.input-field::placeholder { color: #727272; }
+.input-field.focus { background: #FFFFFF; border: 2px solid #F06705; }
+.input-field.error { background: #FDEAEA; border-color: #e85c5c; }
+.input-field.success { background: #EAF6EC; border-color: #5bba6f; }
+.input-field.disabled { opacity: 0.45; }
+.input-hint { font-size: 16px; color: #727272; }
+.input-hint.error { color: #e85c5c; }
+.input-hint.success { color: #5bba6f; }
+
+/* ── Select component ────────────────────────────────────────────────── */
+.select-wrap { display: flex; flex-direction: column; gap: 6px; width: 240px; }
+.select-field {
+  padding: 12px;
+  border-radius: 6px;
+  background: #FFFFFF;
+  border: 1px solid #E4D6C7;
+  color: #121212;
+  font-size: 16px;
+  font-family: 'Inter', sans-serif;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 6L8 10L12 6' stroke='%23727272' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  width: 100%;
+}
+
+/* ── Textarea ────────────────────────────────────────────────────────── */
+.textarea-field {
+  padding: 12px;
+  border-radius: 6px;
+  background: #FFFFFF;
+  border: 1px solid #E4D6C7;
+  color: #121212;
+  font-size: 16px;
+  font-family: 'Inter', sans-serif;
+  resize: vertical;
+  width: 300px;
+  min-height: 88px;
+  outline: none;
+}
+
+/* ── Stepper ─────────────────────────────────────────────────────────── */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: none;
+  background: transparent;
+}
+.stepper-btn {
+  width: 40px;
+  height: 40px;
+  background: #F06705;
+  border: none;
+  color: #121212;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stepper-val {
+  width: 40px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: #121212;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ── Divider ─────────────────────────────────────────────────────────── */
+.divider { height: 1px; background: #343434; width: 100%; }
+.divider-v { width: 1px; background: #343434; height: 40px; }
+
+/* ── Toggle ──────────────────────────────────────────────────────────── */
+.toggle-wrap { position: relative; display: inline-block; width: 44px; height: 24px; }
+.toggle-wrap input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0;
+  background: #424242;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle-track.on { background: #e8a44a; }
+.toggle-thumb {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 18px; height: 18px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle-track.on .toggle-thumb { transform: translateX(20px); }
+
+/* ── Card ────────────────────────────────────────────────────────────── */
+.card {
+  background: rgba(253,243,237,0.9);
+  border: 1px solid #FDF3ED;
+  border-radius: 24px;
+  overflow: hidden;
+  width: 220px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.card-header {
+  background: transparent;
+  border-bottom: 1px solid #EEE4DF;
+  padding: 12px 16px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: #121212;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.card-body {
+  padding: 16px;
+  font-size: 14px;
+  color: #727272;
+  line-height: 1.5;
+}
+
+/* Variant modifiers — mirror Card.tsx's variant prop and the Figma
+   "card" component set (variant = default | elevated | outlined | ghost) */
+.card-elevated {
+  background: rgba(253,243,237,0.85);
+  border: 2px solid #FDF3ED;
+}
+.card-outlined {
+  background: transparent;
+  border-color: #343434;
+  box-shadow: none;
+}
+.card-outlined .card-header {
+  background: transparent;
+}
+.card-ghost {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+.card-ghost .card-header {
+  background: transparent;
+}
+.card-variant-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-disabled);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+/* ── Toast ───────────────────────────────────────────────────────────── */
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid #343434;
+  width: 300px;
+  position: relative;
+}
+.toast-bar { width: 3px; border-radius: 2px; flex-shrink: 0; align-self: stretch; }
+.toast-text { font-size: 14px; line-height: 20px; flex: 1; }
+.toast-info    { background: #081828; }
+.toast-success { background: #0a1f0d; }
+.toast-warning { background: #2a1e08; }
+.toast-error   { background: #2a0808; }
+.toast-info    .toast-bar { background: #5b9ee8; }
+.toast-success .toast-bar { background: #5bba6f; }
+.toast-warning .toast-bar { background: #e8a44a; }
+.toast-error   .toast-bar { background: #e85c5c; }
+.toast-info    .toast-text { color: #5b9ee8; }
+.toast-success .toast-text { color: #5bba6f; }
+.toast-warning .toast-text { color: #e8a44a; }
+.toast-error   .toast-text { color: #e85c5c; }
+
+/* ── Tab bar ─────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #343434;
+  width: 100%;
+}
+.tab {
+  padding: 10px 20px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: #727272;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s;
+}
+.tab.active {
+  color: #f0ede6;
+  border-bottom-color: #e8a44a;
+}
+.tab:hover:not(.active) { color: #f0ede6; }
+
+/* Chip variant — left-aligned, pill-shaped, hugs content */
+.tabs-chip {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+}
+.tab-chip {
+  padding: 8px 16px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: #727272;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+.tab-chip.active {
+  color: #f0ede6;
+  background: #181818;
+  border-color: #343434;
+}
+.tab-chip:hover:not(.active) { color: #f0ede6; background: #292929; }
+
+/* ── Upload field ────────────────────────────────────────────────────── */
+.upload-field {
+  width: 300px;
+  min-height: 100px;
+  background: #FFFFFF;
+  border: 2px dashed #E4D6C7;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.upload-field:hover { border-color: #F06705; }
+.upload-icon { font-size: 24px; }
+.upload-text { font-size: 14px; color: #727272; text-align: center; }
+.upload-text strong { color: #121212; }
+
+/* ── Radio ───────────────────────────────────────────────────────────── */
+.radio-group { display: flex; flex-direction: column; gap: 10px; }
+.radio-item { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.radio-circle {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2px solid #E4D6C7;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.radio-circle.selected { border-color: #F06705; }
+.radio-dot { width: 8px; height: 8px; border-radius: 50%; background: #F06705; }
+.radio-label { font-size: 14px; color: #727272; }
+
+/* ── Checkbox ────────────────────────────────────────────────────────── */
+.checkbox-item { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.checkbox-box {
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  border: 2px solid #424242;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.checkbox-box.checked { border-color: #e8a44a; background: #e8a44a; }
+.checkbox-check { color: #101010; font-size: 12px; font-weight: 700; line-height: 1; }
+.checkbox-label { font-size: 14px; color: #f0ede6; }
+
+/* ── Misc ────────────────────────────────────────────────────────────── */
+.label-tag {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+  margin-top: 16px;
+  margin-bottom: 6px;
+}
+</style>
+</head>
+<body>
+
+<!-- ── Sidebar ─────────────────────────────────────────────────── -->
+<nav class="sidebar">
+  <div class="sidebar-logo">🌭 Hot Dog DS</div>
+  <div class="nav-section">Tokens</div>
+  <a href="#colors">Color Primitives</a>
+  <a href="#semantic">Semantic Tokens</a>
+  <a href="#component-tokens">Component Tokens</a>
+  <a href="#typography">Typography</a>
+  <a href="#spacing">Spacing & Radius</a>
+  <div class="nav-section">Components</div>
+  <a href="#buttons">Button</a>
+  <a href="#avatar">Avatar</a>
+  <a href="#input">Input</a>
+  <a href="#select">Select</a>
+  <a href="#textarea">Textarea</a>
+  <a href="#stepper">Stepper</a>
+  <a href="#tabs">Tabs</a>
+  <a href="#toggle">Toggle</a>
+  <a href="#radio">Radio</a>
+  <a href="#checkbox">Checkbox</a>
+  <a href="#divider">Divider</a>
+  <a href="#card">Card</a>
+  <a href="#toast">Toast</a>
+  <a href="#upload">Upload Field</a>
+</nav>
+
+<!-- ── Main ───────────────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- ── Color Primitives ──────────────────────────────────────── -->
+  <section class="section" id="colors">
+    <div class="section-title">Color Primitives</div>
+    <div class="section-sub">Layer 1 — raw named values. Never reference these directly in components; use semantic tokens instead.</div>
+
+    <div class="subsection">
+      <div class="subsection-title">Neutral</div>
+      <div class="swatch-grid">
+        <div class="swatch"><div class="swatch-color" style="background:#ffffff"></div><div class="swatch-info"><div class="swatch-name">neutral-0</div><div class="swatch-value">#ffffff</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#f3f3f3"></div><div class="swatch-info"><div class="swatch-name">neutral-50</div><div class="swatch-value">#f3f3f3</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#e9e9e9"></div><div class="swatch-info"><div class="swatch-name">neutral-100</div><div class="swatch-value">#e9e9e9</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#cdcdcd"></div><div class="swatch-info"><div class="swatch-name">neutral-200</div><div class="swatch-value">#cdcdcd</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#b5b5b5"></div><div class="swatch-info"><div class="swatch-name">neutral-300</div><div class="swatch-value">#b5b5b5</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#8e8e8e"></div><div class="swatch-info"><div class="swatch-name">neutral-400</div><div class="swatch-value">#8e8e8e</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#727272"></div><div class="swatch-info"><div class="swatch-name">neutral-500</div><div class="swatch-value">#727272</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#515151"></div><div class="swatch-info"><div class="swatch-name">neutral-600</div><div class="swatch-value">#515151</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#424242"></div><div class="swatch-info"><div class="swatch-name">neutral-700</div><div class="swatch-value">#424242</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#343434"></div><div class="swatch-info"><div class="swatch-name">neutral-800</div><div class="swatch-value">#343434</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#292929"></div><div class="swatch-info"><div class="swatch-name">neutral-850</div><div class="swatch-value">#292929</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#212121"></div><div class="swatch-info"><div class="swatch-name">neutral-900</div><div class="swatch-value">#212121</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#181818"></div><div class="swatch-info"><div class="swatch-name">neutral-950</div><div class="swatch-value">#181818</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#101010"></div><div class="swatch-info"><div class="swatch-name">neutral-975</div><div class="swatch-value">#101010</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#000000"></div><div class="swatch-info"><div class="swatch-name">neutral-1000</div><div class="swatch-value">#000000</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#f0ede6"></div><div class="swatch-info"><div class="swatch-name">cream</div><div class="swatch-value">#f0ede6</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#1a1918"></div><div class="swatch-info"><div class="swatch-name">ink</div><div class="swatch-value">#1a1918</div></div></div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Brand & Accent</div>
+      <div class="swatch-grid">
+        <div class="swatch"><div class="swatch-color" style="background:#e8a44a"></div><div class="swatch-info"><div class="swatch-name">amber-400</div><div class="swatch-value">#e8a44a</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#c4853a"></div><div class="swatch-info"><div class="swatch-name">amber-500</div><div class="swatch-value">#c4853a</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#a06828"></div><div class="swatch-info"><div class="swatch-name">amber-600</div><div class="swatch-value">#a06828</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#5bba6f"></div><div class="swatch-info"><div class="swatch-name">green-400</div><div class="swatch-value">#5bba6f</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#2e8b3f"></div><div class="swatch-info"><div class="swatch-name">green-500</div><div class="swatch-value">#2e8b3f</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#e85c5c"></div><div class="swatch-info"><div class="swatch-name">red-400</div><div class="swatch-value">#e85c5c</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#c43030"></div><div class="swatch-info"><div class="swatch-name">red-500</div><div class="swatch-value">#c43030</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#5b9ee8"></div><div class="swatch-info"><div class="swatch-name">blue-400</div><div class="swatch-value">#5b9ee8</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#2266c4"></div><div class="swatch-info"><div class="swatch-name">blue-500</div><div class="swatch-value">#2266c4</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#4ecdc4"></div><div class="swatch-info"><div class="swatch-name">teal-400</div><div class="swatch-value">#4ecdc4</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#1a9e95"></div><div class="swatch-info"><div class="swatch-name">teal-500</div><div class="swatch-value">#1a9e95</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#e8734a"></div><div class="swatch-info"><div class="swatch-name">coral-400</div><div class="swatch-value">#e8734a</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#c4542a"></div><div class="swatch-info"><div class="swatch-name">coral-500</div><div class="swatch-value">#c4542a</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#9b8ec4"></div><div class="swatch-info"><div class="swatch-name">lavender-400</div><div class="swatch-value">#9b8ec4</div></div></div>
+        <div class="swatch"><div class="swatch-color" style="background:#6d5fa0"></div><div class="swatch-info"><div class="swatch-name">lavender-500</div><div class="swatch-value">#6d5fa0</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Semantic Tokens ───────────────────────────────────────── -->
+  <section class="section" id="semantic">
+    <div class="section-title">Semantic Tokens</div>
+    <div class="section-sub">Layer 2 — intent-based aliases. Use these in components, never primitives.</div>
+
+    <div class="subsection">
+      <div class="subsection-title">Surface</div>
+      <div class="token-row"><div class="token-dot" style="background:#FFE548"></div><div class="token-name">surface/bg-app</div><div class="token-alias">— (flat, not aliased)</div><div class="token-hex">#FFE548</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#101010"></div><div class="token-name">surface/bg-primary</div><div class="token-alias">neutral-975</div><div class="token-hex">#101010</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#181818"></div><div class="token-name">surface/bg-secondary</div><div class="token-alias">neutral-950</div><div class="token-hex">#181818</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#212121"></div><div class="token-name">surface/bg-tertiary</div><div class="token-alias">neutral-900</div><div class="token-hex">#212121</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#292929"></div><div class="token-name">surface/bg-surface</div><div class="token-alias">neutral-850</div><div class="token-hex">#292929</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#ffffff; border:1px solid #424242"></div><div class="token-name">surface/bg-inverse</div><div class="token-alias">neutral-0</div><div class="token-hex">#ffffff</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#343434"></div><div class="token-name">surface/border-default</div><div class="token-alias">neutral-800</div><div class="token-hex">#343434</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#424242"></div><div class="token-name">surface/border-strong</div><div class="token-alias">neutral-700</div><div class="token-hex">#424242</div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Text</div>
+      <div class="token-row"><div class="token-dot" style="background:#f0ede6"></div><div class="token-name">text/primary</div><div class="token-alias">neutral-cream</div><div class="token-hex">#f0ede6</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#727272"></div><div class="token-name">text/secondary</div><div class="token-alias">neutral-500</div><div class="token-hex">#727272</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#727272"></div><div class="token-name">text/tertiary</div><div class="token-alias">neutral-500</div><div class="token-hex">#727272</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#515151"></div><div class="token-name">text/disabled</div><div class="token-alias">neutral-600</div><div class="token-hex">#515151</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#101010; border:1px solid #424242"></div><div class="token-name">text/inverse</div><div class="token-alias">neutral-975</div><div class="token-hex">#101010</div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Brand</div>
+      <div class="token-row"><div class="token-dot" style="background:#e8a44a"></div><div class="token-name">brand/amber</div><div class="token-alias">amber-400</div><div class="token-hex">#e8a44a</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#c4853a"></div><div class="token-name">brand/amber-hover</div><div class="token-alias">amber-500</div><div class="token-hex">#c4853a</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#F06705"></div><div class="token-name">brand/orange</div><div class="token-alias">orange-500 (new primary accent)</div><div class="token-hex">#F06705</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#D65C04"></div><div class="token-name">brand/orange-hover</div><div class="token-alias">orange-600</div><div class="token-hex">#D65C04</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#4ecdc4"></div><div class="token-name">brand/teal</div><div class="token-alias">teal-400</div><div class="token-hex">#4ecdc4</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#e8734a"></div><div class="token-name">brand/coral</div><div class="token-alias">coral-400</div><div class="token-hex">#e8734a</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#9b8ec4"></div><div class="token-name">brand/lavender</div><div class="token-alias">lavender-400</div><div class="token-hex">#9b8ec4</div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Semantic Intent</div>
+      <div class="token-row"><div class="token-dot" style="background:#5bba6f"></div><div class="token-name">semantic/success</div><div class="token-alias">green-400</div><div class="token-hex">#5bba6f</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#e8a44a"></div><div class="token-name">semantic/warning</div><div class="token-alias">amber-400</div><div class="token-hex">#e8a44a</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#e85c5c"></div><div class="token-name">semantic/danger</div><div class="token-alias">red-400</div><div class="token-hex">#e85c5c</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#5b9ee8"></div><div class="token-name">semantic/info</div><div class="token-alias">blue-400</div><div class="token-hex">#5b9ee8</div></div>
+    </div>
+  </section>
+
+  <!-- ── Component Tokens ──────────────────────────────────────── -->
+  <section class="section" id="component-tokens">
+    <div class="section-title">Component Tokens</div>
+    <div class="section-sub">Layer 3 — per-component aliases into the semantic layer.</div>
+
+    <div class="subsection">
+      <div class="subsection-title">Buttons</div>
+      <div class="token-row"><div class="token-dot" style="background:#F06705"></div><div class="token-name">component/btn-primary-bg</div><div class="token-alias">brand/orange</div><div class="token-hex">#F06705</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#D65C04"></div><div class="token-name">component/btn-primary-bg-hover</div><div class="token-alias">brand/orange-hover</div><div class="token-hex">#D65C04</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#121212"></div><div class="token-name">component/btn-primary-text</div><div class="token-alias">— (flat; dark ink reads better than white on the orange fill)</div><div class="token-hex">#121212</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#212121"></div><div class="token-name">component/btn-secondary-bg</div><div class="token-alias">surface/bg-tertiary</div><div class="token-hex">#212121</div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Inputs — light field system (Log a Dog page)</div>
+      <div class="token-row"><div class="token-dot" style="background:#FFFFFF; border:1px solid #424242"></div><div class="token-name">component/input-bg</div><div class="token-alias">— (flat, was surface/bg-tertiary)</div><div class="token-hex">#FFFFFF</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#E4D6C7"></div><div class="token-name">component/input-border</div><div class="token-alias">— (flat, was border/strong)</div><div class="token-hex">#E4D6C7</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#F06705"></div><div class="token-name">component/input-border-focus</div><div class="token-alias">border/focus → brand/orange</div><div class="token-hex">#F06705</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#FDEAEA"></div><div class="token-name">component/input-bg-error</div><div class="token-alias">— (flat, was semantic/danger-subtle — that's a dark-mode red)</div><div class="token-hex">#FDEAEA</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#EAF6EC"></div><div class="token-name">component/input-bg-success</div><div class="token-alias">— (flat, was semantic/success-subtle — that's a dark-mode green)</div><div class="token-hex">#EAF6EC</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#121212"></div><div class="token-name">component/input-text</div><div class="token-alias">— (flat; new — text/primary is shared with tabs/buttons and can't be reused)</div><div class="token-hex">#121212</div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Upload Field — light field system</div>
+      <div class="token-row"><div class="token-dot" style="background:#FFFFFF; border:1px solid #424242"></div><div class="token-name">component/upload-bg-default</div><div class="token-alias">— (flat)</div><div class="token-hex">#FFFFFF</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#FDF6EF"></div><div class="token-name">component/upload-bg-hover</div><div class="token-alias">— (flat)</div><div class="token-hex">#FDF6EF</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#EAF6EC"></div><div class="token-name">component/upload-bg-success</div><div class="token-alias">— (flat)</div><div class="token-hex">#EAF6EC</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#FDEAEA"></div><div class="token-name">component/upload-bg-error</div><div class="token-alias">— (flat)</div><div class="token-hex">#FDEAEA</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#E4D6C7"></div><div class="token-name">component/upload-border-default</div><div class="token-alias">component/input-border</div><div class="token-hex">#E4D6C7</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#F06705"></div><div class="token-name">component/upload-border-hover</div><div class="token-alias">border/focus → brand/orange</div><div class="token-hex">#F06705</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#121212"></div><div class="token-name">component/upload-text</div><div class="token-alias">— (flat; new)</div><div class="token-hex">#121212</div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Cards</div>
+      <div class="token-row"><div class="token-dot" style="background:#FDF3ED; opacity:0.9; border:1px solid #424242"></div><div class="token-name">component/card-bg</div><div class="token-alias">— (flat, 90% opacity)</div><div class="token-hex">rgba(253,243,237,.9)</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#FDF3ED; opacity:0.85; border:1px solid #424242"></div><div class="token-name">component/card-bg-elevated</div><div class="token-alias">— (flat, 85% opacity)</div><div class="token-hex">rgba(253,243,237,.85)</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#FDF3ED; border:1px solid #424242"></div><div class="token-name">component/card-fill-border</div><div class="token-alias">— (flat; 1px on default, 2px on elevated)</div><div class="token-hex">#FDF3ED</div></div>
+      <div class="token-row"><div class="token-dot" style="background:transparent; border:1px dashed #424242"></div><div class="token-name">component/card-header-bg</div><div class="token-alias">— (matches card's own fill)</div><div class="token-hex">transparent</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#343434"></div><div class="token-name">component/card-border</div><div class="token-alias">border/default (outlined variant only)</div><div class="token-hex">#343434</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#EEE4DF"></div><div class="token-name">component/card-divider</div><div class="token-alias">— (flat)</div><div class="token-hex">#EEE4DF</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#EEE4DF"></div><div class="token-name">component/card-header-border</div><div class="token-alias">card-divider</div><div class="token-hex">#EEE4DF</div></div>
+      <div class="token-row"><div class="token-dot" style="background:#343434; border-radius:12px"></div><div class="token-name">component/card-radius</div><div class="token-alias">— (flat, all sizes)</div><div class="token-hex">24px</div></div>
+    </div>
+  </section>
+
+  <!-- ── Typography ────────────────────────────────────────────── -->
+  <section class="section" id="typography">
+    <div class="section-title">Typography</div>
+    <div class="section-sub">All type uses Inter. Scale is documented here; applied via font-* properties directly in components.</div>
+
+    <div class="type-row">
+      <div class="type-meta"><div class="type-label">Type/Display</div><div class="type-spec">48px · Bold · 58px</div></div>
+      <div class="type-sample" style="font-size:48px;font-weight:700;line-height:58px">Hot Dog</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-label">Type/H1</div><div class="type-spec">36px · Bold · 44px</div></div>
+      <div class="type-sample" style="font-size:36px;font-weight:700;line-height:44px">Hot Dog</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-label">Type/H2</div><div class="type-spec">28px · Semi Bold · 36px</div></div>
+      <div class="type-sample" style="font-size:28px;font-weight:600;line-height:36px">Hot Dog</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-label">Type/H3</div><div class="type-spec">22px · Semi Bold · 30px</div></div>
+      <div class="type-sample" style="font-size:22px;font-weight:600;line-height:30px">Hot Dog</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-label">Type/H4</div><div class="type-spec">18px · Medium · 26px</div></div>
+      <div class="type-sample" style="font-size:18px;font-weight:500;line-height:26px">Hot Dog</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-label">Type/Body-LG</div><div class="type-spec">16px · Regular · 26px</div></div>
+      <div class="type-sample" style="font-size:16px;font-weight:400;line-height:26px">The quick brown fox jumps over the lazy dog</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-label">Type/Body</div><div class="type-spec">15px · Regular · 24px</div></div>
+      <div class="type-sample" style="font-size:15px;font-weight:400;line-height:24px">The quick brown fox jumps over the lazy dog</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-label">Type/Body-Emphasis ★</div><div class="type-spec">14px · Semi Bold · 20px</div></div>
+      <div class="type-sample" style="font-size:14px;font-weight:600;line-height:20px">The quick brown fox jumps over the lazy dog</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-label">Type/Form-Body</div><div class="type-spec">14px · Regular · 20px</div></div>
+      <div class="type-sample" style="font-size:14px;font-weight:400;line-height:20px">The quick brown fox jumps over the lazy dog</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-label">Type/Tab-Label</div><div class="type-spec">14px · Medium · 20px</div></div>
+      <div class="type-sample" style="font-size:14px;font-weight:500;line-height:20px">Log a dog</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-label">Type/Body-SM-Emphasis ★</div><div class="type-spec">13px · Semi Bold · 18px</div></div>
+      <div class="type-sample" style="font-size:13px;font-weight:600;line-height:18px">The quick brown fox jumps over the lazy dog</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-label">Type/Body-SM</div><div class="type-spec">13px · Regular · 20px</div></div>
+      <div class="type-sample" style="font-size:13px;font-weight:400;line-height:20px">The quick brown fox jumps over the lazy dog</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-label">Type/Form-Label</div><div class="type-spec">12px · Semi Bold · 18px</div></div>
+      <div class="type-sample" style="font-size:12px;font-weight:600;line-height:18px">Email Address</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-label">Type/Caption</div><div class="type-spec">11px · Regular · 16px</div></div>
+      <div class="type-sample" style="font-size:11px;font-weight:400;line-height:16px;color:#727272">Jul 4, 2026 · 12:14 PM</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-label">Type/Label</div><div class="type-spec">11px · Semi Bold · 16px</div></div>
+      <div class="type-sample" style="font-size:11px;font-weight:600;line-height:16px">STANDINGS</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-label">Type/Form-Check</div><div class="type-spec">11px · Bold · 14px</div></div>
+      <div class="type-sample" style="font-size:11px;font-weight:700;line-height:14px">Agree to terms</div>
+    </div>
+  </section>
+
+  <!-- ── Spacing & Radius ──────────────────────────────────────── -->
+  <section class="section" id="spacing">
+    <div class="section-title">Spacing & Radius</div>
+    <div class="section-sub">Consistent spacing scale and border radius tokens.</div>
+
+    <div class="subsection">
+      <div class="subsection-title">Spacing</div>
+      <div class="spacing-row"><div class="spacing-name">--spacing/1</div><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:4px"></div></div><div class="spacing-value">4px</div></div>
+      <div class="spacing-row"><div class="spacing-name">--spacing/2</div><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:8px"></div></div><div class="spacing-value">8px</div></div>
+      <div class="spacing-row"><div class="spacing-name">--spacing/3</div><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:12px"></div></div><div class="spacing-value">12px</div></div>
+      <div class="spacing-row"><div class="spacing-name">--spacing/4</div><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:16px"></div></div><div class="spacing-value">16px</div></div>
+      <div class="spacing-row"><div class="spacing-name">--spacing/5</div><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:24px"></div></div><div class="spacing-value">24px</div></div>
+      <div class="spacing-row"><div class="spacing-name">--spacing/6</div><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:32px"></div></div><div class="spacing-value">32px</div></div>
+      <div class="spacing-row"><div class="spacing-name">--spacing/7</div><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:48px"></div></div><div class="spacing-value">48px</div></div>
+      <div class="spacing-row"><div class="spacing-name">--spacing/8</div><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:64px"></div></div><div class="spacing-value">64px</div></div>
+      <div class="spacing-row"><div class="spacing-name">--spacing/9</div><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:96px"></div></div><div class="spacing-value">96px</div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Border Radius</div>
+      <div class="radius-grid">
+        <div class="radius-item"><div class="radius-box" style="border-radius:2px"></div><div class="radius-label">--radius/xs<br/>2px</div></div>
+        <div class="radius-item"><div class="radius-box" style="border-radius:4px"></div><div class="radius-label">--radius/sm<br/>4px</div></div>
+        <div class="radius-item"><div class="radius-box" style="border-radius:6px"></div><div class="radius-label">--radius/md<br/>6px</div></div>
+        <div class="radius-item"><div class="radius-box" style="border-radius:8px"></div><div class="radius-label">--radius/base<br/>8px</div></div>
+        <div class="radius-item"><div class="radius-box" style="border-radius:10px"></div><div class="radius-label">--radius/lg<br/>10px</div></div>
+        <div class="radius-item"><div class="radius-box" style="border-radius:16px"></div><div class="radius-label">--radius/xl<br/>16px</div></div>
+        <div class="radius-item"><div class="radius-box" style="border-radius:9999px"></div><div class="radius-label">--radius/pill<br/>9999px</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════ COMPONENTS ══════════════════════════ -->
+
+  <!-- ── Button ────────────────────────────────────────────────── -->
+  <section class="section" id="buttons">
+    <div class="section-title">Button</div>
+    <div class="section-sub">6 styles × 5 sizes × disabled state.</div>
+
+    <div class="subsection">
+      <div class="subsection-title">Styles</div>
+      <div class="component-canvas">
+        <div class="component-row">
+          <button class="btn btn-primary btn-medium">Primary</button>
+          <button class="btn btn-secondary btn-medium">Secondary</button>
+          <button class="btn btn-positive btn-medium">Positive</button>
+          <button class="btn btn-negative btn-medium">Negative</button>
+          <button class="btn btn-basic btn-medium">Basic</button>
+          <button class="btn btn-info btn-medium">Info</button>
+        </div>
+        <div class="label-tag">Disabled</div>
+        <div class="component-row">
+          <button class="btn btn-primary btn-medium btn-disabled" disabled>Primary</button>
+          <button class="btn btn-secondary btn-medium btn-disabled" disabled>Secondary</button>
+          <button class="btn btn-positive btn-medium btn-disabled" disabled>Positive</button>
+          <button class="btn btn-negative btn-medium btn-disabled" disabled>Negative</button>
+          <button class="btn btn-basic btn-medium btn-disabled" disabled>Basic</button>
+          <button class="btn btn-info btn-medium btn-disabled" disabled>Info</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Sizes (Primary)</div>
+      <div class="component-canvas">
+        <div class="component-row" style="align-items:flex-end">
+          <button class="btn btn-primary btn-mini">Mini</button>
+          <button class="btn btn-primary btn-small">Small</button>
+          <button class="btn btn-primary btn-medium">Medium</button>
+          <button class="btn btn-primary btn-large">Large</button>
+          <button class="btn btn-primary btn-big">Big</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Avatar ────────────────────────────────────────────────── -->
+  <section class="section" id="avatar">
+    <div class="section-title">Avatar</div>
+    <div class="section-sub">Initials fallback with deterministic color palette. Supports photo and emoji variants.</div>
+    <div class="component-canvas">
+      <div class="component-row" style="align-items:flex-end">
+        <div class="avatar" style="width:24px;height:24px;font-size:9px;background:#e8a44a">AC</div>
+        <div class="avatar" style="width:32px;height:32px;font-size:13px;background:#5b6ab5">AC</div>
+        <div class="avatar" style="width:40px;height:40px;font-size:16px;background:#4aa8a4">JD</div>
+        <div class="avatar" style="width:80px;height:80px;font-size:24px;background:#c45f7a">MK</div>
+      </div>
+      <div class="label-tag">Sizes: sm (24) · md (32) · lg (40) · xl (80)</div>
+    </div>
+  </section>
+
+  <!-- ── Input ─────────────────────────────────────────────────── -->
+  <section class="section" id="input">
+    <div class="section-title">Input</div>
+    <div class="section-sub">6 states with label and hint text.</div>
+    <div class="component-canvas">
+      <div class="component-row" style="flex-wrap:wrap;align-items:flex-start">
+        <div class="input-wrap">
+          <div class="input-label">Default</div>
+          <input class="input-field" placeholder="Enter value…" />
+          <div class="input-hint">Helper text appears here</div>
+        </div>
+        <div class="input-wrap">
+          <div class="input-label">Focus</div>
+          <input class="input-field focus" value="Typing…" />
+          <div class="input-hint">Helper text appears here</div>
+        </div>
+        <div class="input-wrap">
+          <div class="input-label">Error</div>
+          <input class="input-field error" value="bad@" />
+          <div class="input-hint error">Please enter a valid email</div>
+        </div>
+        <div class="input-wrap">
+          <div class="input-label">Success</div>
+          <input class="input-field success" value="hello@email.com" />
+          <div class="input-hint success">Looks good!</div>
+        </div>
+        <div class="input-wrap" style="opacity:0.45">
+          <div class="input-label">Disabled</div>
+          <input class="input-field" placeholder="Not available" disabled />
+          <div class="input-hint">Helper text appears here</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Select ────────────────────────────────────────────────── -->
+  <section class="section" id="select">
+    <div class="section-title">Select</div>
+    <div class="section-sub">Styled dropdown with chevron icon.</div>
+    <div class="component-canvas">
+      <div class="component-row">
+        <div class="select-wrap">
+          <div class="input-label">Pick a dog</div>
+          <select class="select-field">
+            <option>Select a dog…</option>
+            <option>Biscuit</option>
+            <option>Frank</option>
+            <option>Wienerschnitzel</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Textarea ──────────────────────────────────────────────── -->
+  <section class="section" id="textarea">
+    <div class="section-title">Textarea</div>
+    <div class="section-sub">Multi-line text input.</div>
+    <div class="component-canvas">
+      <div class="component-row">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="input-label">Notes</div>
+          <textarea class="textarea-field" placeholder="Add a note about this dog…"></textarea>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Stepper ───────────────────────────────────────────────── -->
+  <section class="section" id="stepper">
+    <div class="section-title">Stepper</div>
+    <div class="section-sub">Increment/decrement control for numeric values.</div>
+    <div class="component-canvas">
+      <div class="component-row">
+        <div class="stepper">
+          <button class="stepper-btn">−</button>
+          <div class="stepper-val">3</div>
+          <button class="stepper-btn">+</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Tabs ──────────────────────────────────────────────────── -->
+  <section class="section" id="tabs">
+    <div class="section-title">Tabs</div>
+    <div class="section-sub">4 variants: tabular, pointing (bottom-border indicator), secondary, and chip.</div>
+
+    <div class="subsection">
+      <div class="subsection-title">Pointing (bottom-border indicator)</div>
+      <div class="component-canvas">
+        <div class="tabs">
+          <div class="tab">Log a dog</div>
+          <div class="tab">Standings</div>
+          <div class="tab active">Gallery</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Chip — left-aligned, hugs content (used for the app's top tab bar)</div>
+      <div class="component-canvas">
+        <div class="tabs-chip">
+          <div class="tab-chip">Log a dog</div>
+          <div class="tab-chip active">Standings</div>
+          <div class="tab-chip">Gallery</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Toggle ────────────────────────────────────────────────── -->
+  <section class="section" id="toggle">
+    <div class="section-title">Toggle</div>
+    <div class="section-sub">On/off switch.</div>
+    <div class="component-canvas">
+      <div class="component-row">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="toggle-wrap">
+            <div class="toggle-track">
+              <div class="toggle-thumb"></div>
+            </div>
+          </div>
+          <span style="font-size:14px;color:#727272">Off</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="toggle-wrap">
+            <div class="toggle-track on">
+              <div class="toggle-thumb"></div>
+            </div>
+          </div>
+          <span style="font-size:14px;color:#f0ede6">On</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Radio ─────────────────────────────────────────────────── -->
+  <section class="section" id="radio">
+    <div class="section-title">Radio / RadioGroup</div>
+    <div class="section-sub">Single-select option group.</div>
+    <div class="component-canvas">
+      <div class="radio-group">
+        <div class="radio-item">
+          <div class="radio-circle selected"><div class="radio-dot"></div></div>
+          <div class="radio-label">Option A</div>
+        </div>
+        <div class="radio-item">
+          <div class="radio-circle"></div>
+          <div class="radio-label">Option B</div>
+        </div>
+        <div class="radio-item">
+          <div class="radio-circle"></div>
+          <div class="radio-label">Option C</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Checkbox ──────────────────────────────────────────────── -->
+  <section class="section" id="checkbox">
+    <div class="section-title">Checkbox</div>
+    <div class="section-sub">Multi-select boolean control.</div>
+    <div class="component-canvas">
+      <div class="component-col">
+        <div class="checkbox-item">
+          <div class="checkbox-box checked"><span class="checkbox-check">✓</span></div>
+          <div class="checkbox-label">Checked</div>
+        </div>
+        <div class="checkbox-item">
+          <div class="checkbox-box"></div>
+          <div class="checkbox-label">Unchecked</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Divider ───────────────────────────────────────────────── -->
+  <section class="section" id="divider">
+    <div class="section-title">Divider</div>
+    <div class="section-sub">Horizontal and vertical separators.</div>
+    <div class="component-canvas">
+      <div class="component-col">
+        <div class="divider"></div>
+        <div class="component-row">
+          <span style="font-size:14px;color:#727272">Left</span>
+          <div class="divider-v"></div>
+          <span style="font-size:14px;color:#727272">Right</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Card ──────────────────────────────────────────────────── -->
+  <section class="section" id="card">
+    <div class="section-title">Card</div>
+    <div class="section-sub">Surface container with optional header. 4 variants × optional header, used via the <code>variant</code> prop in <code>Card.tsx</code>.</div>
+
+    <div class="subsection">
+      <div class="subsection-title">Variants (with header)</div>
+      <div class="component-canvas">
+        <div class="component-row" style="align-items:flex-start">
+          <div>
+            <div class="card-variant-label">Default</div>
+            <div class="card">
+              <div class="card-header">Overall Standings</div>
+              <div class="card-body">Filled background, border, and drop shadow.</div>
+            </div>
+          </div>
+          <div>
+            <div class="card-variant-label">Elevated</div>
+            <div class="card card-elevated">
+              <div class="card-header">Overall Standings</div>
+              <div class="card-body">Lighter fill, no border, drop shadow.</div>
+            </div>
+          </div>
+          <div>
+            <div class="card-variant-label">Outlined</div>
+            <div class="card card-outlined">
+              <div class="card-header">Overall Standings</div>
+              <div class="card-body">No fill — border only, no shadow. Used on the Standings tab.</div>
+            </div>
+          </div>
+          <div>
+            <div class="card-variant-label">Ghost</div>
+            <div class="card card-ghost">
+              <div class="card-header">Overall Standings</div>
+              <div class="card-body">No fill, no border, no shadow.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">Variants (header-less)</div>
+      <div class="component-canvas">
+        <div class="component-row" style="align-items:flex-start">
+          <div>
+            <div class="card-variant-label">Default</div>
+            <div class="card">
+              <div class="card-body">Body-only — no header block.</div>
+            </div>
+          </div>
+          <div>
+            <div class="card-variant-label">Elevated</div>
+            <div class="card card-elevated">
+              <div class="card-body">Body-only — no header block.</div>
+            </div>
+          </div>
+          <div>
+            <div class="card-variant-label">Outlined</div>
+            <div class="card card-outlined">
+              <div class="card-body">Body-only — no header block.</div>
+            </div>
+          </div>
+          <div>
+            <div class="card-variant-label">Ghost</div>
+            <div class="card card-ghost">
+              <div class="card-body">Body-only — no header block.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Toast ─────────────────────────────────────────────────── -->
+  <section class="section" id="toast">
+    <div class="section-title">Toast</div>
+    <div class="section-sub">4 intent variants for feedback messages.</div>
+    <div class="component-canvas">
+      <div class="component-col">
+        <div class="toast toast-info"><div class="toast-bar"></div><div class="toast-text">Info — something you should know about.</div></div>
+        <div class="toast toast-success"><div class="toast-bar"></div><div class="toast-text">🎉 GIF is ready in the gallery!</div></div>
+        <div class="toast toast-warning"><div class="toast-bar"></div><div class="toast-text">Warning — check this before continuing.</div></div>
+        <div class="toast toast-error"><div class="toast-bar"></div><div class="toast-text">Something went wrong — please try again.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Upload Field ──────────────────────────────────────────── -->
+  <section class="section" id="upload">
+    <div class="section-title">Upload Field</div>
+    <div class="section-sub">Drag-and-drop zone for file inputs.</div>
+    <div class="component-canvas">
+      <div class="upload-field">
+        <div class="upload-icon">📎</div>
+        <div class="upload-text"><strong>Choose a file</strong> or drag it here</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

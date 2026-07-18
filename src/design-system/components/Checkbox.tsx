@@ -48,13 +48,13 @@ export default function Checkbox({
     background:     isFilled
       ? "var(--brand\\/amber, #e8a44a)"
       : isDisabled
-      ? "var(--surface\\/bg-primary, #0f0f13)"
-      : "var(--surface\\/bg-tertiary, #1e1e28)",
+      ? "var(--surface\\/bg-primary, #101010)"
+      : "var(--surface\\/bg-tertiary, #212121)",
     border: isFilled
       ? "none"
       : isDisabled
-      ? "1px solid var(--surface\\/border-default, #2e2e40)"
-      : "1px solid var(--component\\/input-border, #3a3a52)",
+      ? "1px solid var(--surface\\/border-default, #343434)"
+      : "1px solid var(--component\\/input-border, #424242)",
     boxSizing: "border-box",
   };
 
@@ -64,7 +64,7 @@ export default function Checkbox({
     fontWeight: 400,
     lineHeight: "20px",
     color:      isDisabled
-      ? "var(--text\\/disabled, #4a4860)"
+      ? "var(--text\\/disabled, #515151)"
       : "var(--text\\/secondary, #9e9bb4)",
     whiteSpace: "nowrap",
     userSelect: "none",
@@ -100,7 +100,7 @@ export default function Checkbox({
             width:        "10px",
             height:       "2px",
             borderRadius: "1px",
-            background:   "var(--text\\/inverse, #0f0f13)",
+            background:   "var(--text\\/inverse, #101010)",
           }} />
         )}
       </div>

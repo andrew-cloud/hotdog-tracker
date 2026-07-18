@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 // ── Types ─────────────────────────────────────────────
 
-export type TabVariant = "tabular" | "pointing" | "secondary-pointing" | "secondary";
+export type TabVariant = "tabular" | "pointing" | "secondary-pointing" | "secondary" | "chip";
 export type TabState   = "default" | "active" | "hover" | "disabled";
 
 export interface Tab {
@@ -31,11 +31,11 @@ function getInnerStyle(variant: TabVariant, state: TabState): React.CSSPropertie
         ...base,
         borderRadius:    state === "active" ? "6px 6px 0 0" : "6px 6px 0 0",
         background:
-          state === "active" ? "var(--component\\/tab-bg-active, #16161d)" :
-          state === "hover"  ? "var(--component\\/tab-bg-hover, #242432)"  :
-                               "var(--component\\/tab-bg-default, #1e1e28)",
+          state === "active" ? "var(--component\\/tab-bg-active, #181818)" :
+          state === "hover"  ? "var(--component\\/tab-bg-hover, #292929)"  :
+                               "var(--component\\/tab-bg-default, #212121)",
         border: state === "active"
-          ? "1px solid var(--component\\/tab-border, #2e2e40)"
+          ? "1px solid var(--component\\/tab-border, #343434)"
           : "none",
       };
 
@@ -43,7 +43,7 @@ function getInnerStyle(variant: TabVariant, state: TabState): React.CSSPropertie
     case "secondary-pointing":
       return {
         ...base,
-        background: state === "hover" ? "var(--component\\/tab-bg-hover, #242432)" : "transparent",
+        background: state === "hover" ? "var(--component\\/tab-bg-hover, #292929)" : "transparent",
       };
 
     case "secondary":
@@ -51,25 +51,40 @@ function getInnerStyle(variant: TabVariant, state: TabState): React.CSSPropertie
         ...base,
         borderRadius: "var(--radius\\/md, 6px)",
         background:
-          state === "active" ? "var(--component\\/tab-bg-active, #16161d)" :
-          state === "hover"  ? "var(--component\\/tab-bg-hover, #242432)"  :
+          state === "active" ? "var(--component\\/tab-bg-active, #181818)" :
+          state === "hover"  ? "var(--component\\/tab-bg-hover, #292929)"  :
                                "transparent",
         border: state === "active"
-          ? "1px solid var(--component\\/tab-border, #2e2e40)"
+          ? "1px solid var(--component\\/tab-border, #343434)"
           : "none",
+      };
+
+    case "chip":
+      return {
+        ...base,
+        width:        "auto",
+        padding:      "8px 16px",
+        borderRadius: "var(--radius\\/pill, 9999px)",
+        background:
+          state === "active" ? "var(--component\\/tab-bg-active, #181818)" :
+          state === "hover"  ? "var(--component\\/tab-bg-hover, #292929)"  :
+                               "transparent",
+        border: state === "active"
+          ? "1px solid var(--component\\/tab-border, #343434)"
+          : "1px solid transparent",
       };
   }
 }
 
 function getLabelColor(variant: TabVariant, state: TabState): string {
-  if (state === "disabled") return "var(--component\\/tab-text-disabled, #4a4860)";
+  if (state === "disabled") return "var(--component\\/tab-text-disabled, #515151)";
   if (state === "hover")    return "var(--component\\/tab-text-hover, #f0ede6)";
   if (state === "active") {
     return (variant === "pointing" || variant === "secondary-pointing")
       ? "var(--component\\/tab-indicator, #e8a44a)"
       : "var(--component\\/tab-text-active, #f0ede6)";
   }
-  return "var(--component\\/tab-text-default, #6b6882)";
+  return "var(--component\\/tab-text-default, #727272)";
 }
 
 // ── TabRail ───────────────────────────────────────────
@@ -88,7 +103,7 @@ export function TabRail({ style }: { style?: React.CSSProperties }) {
         height:     "1px",
         minHeight:  "1px",
         minWidth:   "1px",
-        background: "var(--component\\/tab-border, #2e2e40)",
+        background: "var(--component\\/tab-border, #343434)",
       }} />
     </div>
   );
@@ -130,7 +145,7 @@ export function TabItem({
         flexDirection: "column",
         alignItems: "flex-start",
         position:   "relative",
-        flex:       "1 0 0",
+        flex:       variant === "chip" ? "0 0 auto" : "1 0 0",
         minWidth:   "1px",
         minHeight:  "1px",
         opacity:    isDisabled ? 0.4 : 1,
@@ -143,13 +158,15 @@ export function TabItem({
     >
       <div style={getInnerStyle(variant, effectiveState)}>
         <span style={{
-          fontFamily: "Inter, sans-serif",
-          fontSize:   "16px",
-          fontWeight: 500,
-          lineHeight: "22px",
-          color:      getLabelColor(variant, effectiveState),
-          whiteSpace: "nowrap",
-          flexShrink: 0,
+          fontFamily:    "'Space Grotesk', sans-serif",
+          fontSize:      "14px",
+          fontWeight:    800,
+          lineHeight:    "22px",
+          color:         getLabelColor(variant, effectiveState),
+          whiteSpace:    "nowrap",
+          flexShrink:    0,
+          textTransform: "uppercase",
+          letterSpacing: "0.04em",
         }}>
           {label}
         </span>
@@ -157,7 +174,7 @@ export function TabItem({
 
       {showRail && (
         <div style={{
-          background: "var(--component\\/tab-border, #2e2e40)",
+          background: "var(--component\\/tab-border, #343434)",
           height:     "1px",
           flexShrink: 0,
           width:      "100%",
@@ -216,17 +233,24 @@ export default function TabBar({
     ? "0 var(--radius\\/md, 6px) var(--radius\\/md, 6px) var(--radius\\/md, 6px)"
     : "var(--radius\\/md, 6px)";
 
-  const showRail    = variant !== "secondary";
+  const showRail    = variant !== "secondary" && variant !== "chip";
   const showPane    = !!children;
 
   return (
     <div className={className} style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", width: "100%", ...style }}>
       {/* Tab row */}
       <div style={{
-        display:    "flex",
-        alignItems: "flex-end",
-        flexShrink: 0,
-        width:      "100%",
+        display:        "flex",
+        alignItems:     variant === "chip" ? "center" : "flex-end",
+        justifyContent: "flex-start",
+        gap:            variant === "chip" ? "var(--spacing\\/2, 8px)" : undefined,
+        flexShrink:     0,
+        width:          "100%",
+        overflowX:      variant === "chip" ? "auto" : undefined,
+        overflowY:      variant === "chip" ? "hidden" : undefined,
+        WebkitOverflowScrolling: variant === "chip" ? "touch" : undefined,
+        maskImage:       variant === "chip" ? "linear-gradient(to right, #000 calc(100% - 32px), transparent 100%)" : undefined,
+        WebkitMaskImage: variant === "chip" ? "linear-gradient(to right, #000 calc(100% - 32px), transparent 100%)" : undefined,
       }}>
         {tabs.map(tab => (
           <TabItem
@@ -247,11 +271,11 @@ export default function TabBar({
         <div style={{
           width:      "100%",
           background: variant === "secondary"
-            ? "var(--surface\\/bg-tertiary, #1e1e28)"
-            : "var(--component\\/tab-bg-active, #16161d)",
+            ? "var(--surface\\/bg-tertiary, #212121)"
+            : "var(--component\\/tab-bg-active, #181818)",
           border:     variant === "secondary"
             ? "none"
-            : "1px solid var(--component\\/tab-border, #2e2e40)",
+            : "1px solid var(--component\\/tab-border, #343434)",
           borderTop:  showRail ? "none" : undefined,
           borderRadius: paneRadius,
           boxSizing:  "border-box",

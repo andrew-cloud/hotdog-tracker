@@ -51,24 +51,24 @@ export default function Select({
     : "default";
 
   const FIELD_BG: Record<string, string> = {
-    default:  "var(--component\\/input-bg, #1e1e28)",
-    selected: "var(--component\\/input-bg, #1e1e28)",
-    error:    "var(--component\\/input-bg-error, #2a0808)",
-    disabled: "var(--surface\\/bg-primary, #0f0f13)",
+    default:  "var(--component\\/input-bg, #FFFFFF)",
+    selected: "var(--component\\/input-bg, #FFFFFF)",
+    error:    "var(--component\\/input-bg-error, #FDEAEA)",
+    disabled: "var(--component\\/input-bg, #FFFFFF)",
   };
 
   const FIELD_BORDER: Record<string, string> = {
-    default:  "1px solid var(--component\\/input-border, #3a3a52)",
-    selected: "1px solid var(--component\\/input-border, #3a3a52)",
+    default:  "1px solid var(--component\\/input-border, #E4D6C7)",
+    selected: "1px solid var(--component\\/input-border, #E4D6C7)",
     error:    "1px solid var(--component\\/input-border-error, #e85c5c)",
-    disabled: "1px solid var(--surface\\/border-default, #2e2e40)",
+    disabled: "1px solid var(--component\\/input-border, #E4D6C7)",
   };
 
   const VALUE_COLOR: Record<string, string> = {
-    default:  "var(--text\\/tertiary, #6b6882)",
-    selected: "var(--text\\/primary, #f0ede6)",
-    error:    "var(--text\\/tertiary, #6b6882)",
-    disabled: "var(--text\\/disabled, #4a4860)",
+    default:  "var(--text\\/tertiary, #727272)",
+    selected: "var(--component\\/input-text, #121212)",
+    error:    "var(--text\\/tertiary, #727272)",
+    disabled: "var(--text\\/disabled, #515151)",
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -82,11 +82,11 @@ export default function Select({
 
       {/* Label */}
       <p style={{
-        fontFamily: "Inter, sans-serif",
+        fontFamily: "'Space Grotesk', sans-serif",
         fontSize:   "16px",
         fontWeight: 600,
         lineHeight: "22px",
-        color:      "var(--text\\/secondary, #9e9bb4)",
+        color:      "var(--text\\/secondary, #727272)",
         margin:     0,
       }}>
         {label}
@@ -109,10 +109,10 @@ export default function Select({
             border:           FIELD_BORDER[stateKey],
             borderRadius:     "var(--radius\\/md, 6px)",
             color:            VALUE_COLOR[stateKey],
-            fontFamily:       "Inter, sans-serif",
+            fontFamily:       "'Space Grotesk', sans-serif",
             // iOS Safari zooms on inputs < 16px — 16px prevents zoom
             fontSize:         "16px",
-            fontWeight:       400,
+            fontWeight:       500,
             lineHeight:       "20px",
             // Hide the browser's native arrow — we render our own
             appearance:       "none",
@@ -142,12 +142,13 @@ export default function Select({
           top:           "50%",
           transform:     "translateY(-50%)",
           pointerEvents: "none",
-          fontFamily:    "Inter, sans-serif",
+          fontFamily:    "'Space Grotesk', sans-serif",
           fontSize:      "11px",
+          fontWeight:    500,
           lineHeight:    "16px",
           color:         isError
             ? "var(--semantic\\/danger, #e85c5c)"
-            : "var(--text\\/tertiary, #6b6882)",
+            : "var(--text\\/tertiary, #727272)",
           userSelect:    "none",
         }}>
           ▾
@@ -157,9 +158,9 @@ export default function Select({
       {/* Error hint */}
       {isError && (
         <p style={{
-          fontFamily: "Inter, sans-serif",
+          fontFamily: "'Space Grotesk', sans-serif",
           fontSize:   "16px",
-          fontWeight: 400,
+          fontWeight: 500,
           lineHeight: "22px",
           color:      "var(--semantic\\/danger, #e85c5c)",
           margin:     0,

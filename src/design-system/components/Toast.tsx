@@ -71,7 +71,7 @@ export default function Toast({
         alignItems:   "flex-start",
         overflow:     "hidden",
         borderRadius: "var(--radius\\/md, 6px)",
-        border:       "1px solid var(--component\\/toast-border, #2e2e40)",
+        border:       "1px solid var(--component\\/toast-border, #343434)",
         width:        "360px",
         background:   BG[type],
         boxSizing:    "border-box",
@@ -185,7 +185,7 @@ export default function Toast({
                 fontSize:   "18px",
                 fontWeight: 400,
                 lineHeight: "20px",
-                color:      "var(--component\\/toast-close, #6b6882)",
+                color:      "var(--component\\/toast-close, #727272)",
                 whiteSpace: "nowrap",
               }}>
                 ×

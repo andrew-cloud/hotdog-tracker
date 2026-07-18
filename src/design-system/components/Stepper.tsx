@@ -65,11 +65,11 @@ function StepperButton({ char, disabled = false, onClick, ariaLabel }: StepperBu
       }}
     >
       <span style={{
-        fontFamily:    "Inter, sans-serif",
+        fontFamily:    "'Space Grotesk', sans-serif",
         fontSize:      "18px",
         fontWeight:    700,
         lineHeight:    "20px",
-        color:         "var(--surface\\/bg-primary, #0f0f13)",
+        color:         "var(--surface\\/bg-primary, #101010)",
         userSelect:    "none",
         pointerEvents: "none",
       }}>
@@ -132,11 +132,11 @@ export default function Stepper({
       {/* Label */}
       {showLabel && label && (
         <span style={{
-          fontFamily: "Inter, sans-serif",
+          fontFamily: "'Space Grotesk', sans-serif",
           fontSize:   "16px",
           fontWeight: 600,
           lineHeight: "22px",
-          color:      "var(--text\\/secondary, #6b6882)",
+          color:      "var(--text\\/secondary, #727272)",
           whiteSpace: "nowrap",
           userSelect: "none",
         }}>
@@ -179,11 +179,11 @@ export default function Stepper({
           }}
         >
           <span style={{
-            fontFamily: "Inter, sans-serif",
+            fontFamily: "'Space Grotesk', sans-serif",
             fontSize:   "16px",
             fontWeight: 700,
             lineHeight: "20px",
-            color:      "var(--text\\/primary, #f0ede6)",
+            color:      "var(--component\\/input-text, #121212)",
             textAlign:  "center",
             userSelect: "none",
           }}>

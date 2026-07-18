@@ -42,16 +42,43 @@ All components use CSS custom properties defined globally. Never hard-code a col
 
 | Token | Hex | Usage |
 |---|---|---|
-| `--text/primary` | `#f0ede6` | Main body text, names, labels |
-| `--text/secondary` | `#a09cb8` | Secondary labels, subtitles |
-| `--text/tertiary` | `#6b6882` | Dates, captions, hints |
-| `--brand/amber` | `#e8a44a` | Hot dog counts, accents, progress |
-| `--surface/bg-primary` | `#0e0e14` | App background |
-| `--surface/bg-secondary` | `#13131a` | Page/section background |
-| `--surface/bg-tertiary` | `#1e1e28` | Card media areas, inset areas |
-| `--surface/border-default` | `#2e2e40` | Borders, dividers, progress tracks |
-| `--component/card-bg` | `#16161d` | Card background |
-| `--component/card-border` | `#2e2e40` | Card border |
+| `--text/primary` | `#f0ede6` | Dark-mode body text — shared with tabs/buttons; do **not** reuse for anything on the new light field/card system |
+| `--text/secondary` | `#727272` | Secondary labels, subtitles — reads fine on both dark and the new light surfaces |
+| `--text/tertiary` | `#727272` | Dates, captions, hints |
+| `--brand/amber` | `#e8a44a` | Legacy accent — warning-tone subtitle text, no longer the primary button/focus accent |
+| `--brand/orange` | `#F06705` | **New primary accent** — buttons, focus rings, active/selected states |
+| `--brand/orange-hover` | `#D65C04` | Hover/pressed shade of the primary accent |
+| `--surface/bg-app` | `#FFE548` | App/page background (flat accent, not aliased to the neutral scale) |
+| `--surface/bg-primary` | `#101010` | Disabled-state fills, icon-on-color text (not the page background) |
+| `--surface/bg-secondary` | `#181818` | Page/section background |
+| `--surface/bg-tertiary` | `#212121` | Card media areas, inset areas |
+| `--surface/border-default` | `#343434` | Borders, dividers, progress tracks |
+| `--component/card-bg` | `rgba(253,243,237,0.9)` | Card background — cream fill at 90% opacity (default variant, 1px fill-border) |
+| `--component/card-bg-elevated` | `rgba(253,243,237,0.85)` | Elevated card background — same cream, 85% opacity, 2px fill-border |
+| `--component/card-fill-border` | `#FDF3ED` | Rim border on default (1px) / elevated (2px) — same hue as the fill, at full opacity |
+| `--component/card-radius` | `24px` | Card corner radius, all sizes (flat, not aliased to the radius scale) |
+| `--component/card-border` | `#343434` | Border used by the **outlined** variant only (no fill, so it keeps the neutral gray) |
+| `--component/card-divider` | `#EEE4DF` | Row divider inside cards |
+| `--component/card-header-bg` | `transparent` | Card header background — matches the card's own fill (card-bg / card-bg-elevated) showing through |
+| `--component/card-header-border` | `#EEE4DF` | Header's bottom border — aliases `card-divider` so it matches the row dividers, not `border/default` |
+| `--component/btn-primary-bg` | `#F06705` | Primary button fill — aliases `brand/orange` |
+| `--component/btn-primary-bg-hover` | `#D65C04` | Primary button hover fill — aliases `brand/orange-hover` |
+| `--component/btn-primary-text` | `#121212` | Primary button label — dark ink reads with higher contrast than white against the orange fill |
+| `--component/input-bg` | `#FFFFFF` | Field fill for Input / Select / Textarea / `.ds-name-field` — clean white against the cream card |
+| `--component/input-bg-focus` | `#FFFFFF` | Unchanged on focus — focus is communicated by the border only |
+| `--component/input-border` | `#E4D6C7` | Field border — soft warm tan-gray; also used as Radio's unselected ring and the mood-picker's idle border |
+| `--component/input-border-focus` | `#F06705` | Aliases `border/focus` → `brand/orange` |
+| `--component/input-bg-error` | `#FDEAEA` | Light red tint (was aliasing a dark-mode-only red before this pass) |
+| `--component/input-bg-success` | `#EAF6EC` | Light green tint (same reasoning as bg-error) |
+| `--component/input-text` | `#121212` | Field value/selected text — dark ink; `text/primary` can't be reused here (shared with tabs/buttons) |
+| `--component/upload-bg-default` / `-hover` / `-success` / `-error` | `#FFFFFF` / `#FDF6EF` / `#EAF6EC` / `#FDEAEA` | UploadField zone fills, mirrors the input bg system |
+| `--component/upload-text` | `#121212` | UploadField label text (hover/selected/filled states) |
+
+Card header title text (`.ds-card-title`, `.ds-streak-title`, `.ds-battle-title`, `.ds-champion-title`, and `Card.tsx`'s title) is `#121212` — same raw value as `.ds-standings-name` — rather than `--text/primary`, since that token is shared with tabs/buttons and would drag those along too. Header horizontal padding matches the body's horizontal padding (20px on `.ds-card-header`; `Card.tsx`'s `HEADER_PADDING` now derives its horizontal value from `PADDING[size]`).
+
+The "Year of the Dog" app header (`.app-header`) has no background — it's transparent over the app background. Its title text is `#121212`.
+
+**Log a Dog page / form-field system.** Select, Input, Textarea, Stepper's value display, UploadField, and Radio all moved from the old dark-theme field styling to the light system above (light card era, confirmed direction: "light, matching cards"). The same `--text/primary` collision that applies to card titles applies here too — none of these components read field value/label text from `--text/primary` anymore; they use the new `--component/input-text` (or `--component/upload-text`) token instead. `--border/focus` (and therefore `--component/input-border-focus` and `--component/upload-border-hover`) now resolves to `--brand/orange` instead of `--brand/amber` — this is the "new primary accent color for buttons/focus states/active states." Buttons keep using the same `--component/btn-primary-*` tokens as before; only their values changed. `.ds-mood-btn`'s hover/selected border previously read a `--accent` custom property that was never actually defined anywhere (a dead reference silently falling back to its hardcoded `#e8a44a` fallback) — fixed to reference `--brand/orange` directly.
 
 ### Radius tokens
 
@@ -84,6 +111,7 @@ The following patterns appear in screens but have not yet been promoted to reusa
 | Pattern | Appears on | Priority |
 |---|---|---|
 | `header` — dark bar with "HOTDOG SLAM" wordmark | Every screen | High — create as App-Specific component |
+| `chip` variant on `tab-item` — pill-shaped, left-aligned, hug-content tab (built in code in `Tabs.tsx`/`App.jsx`, not yet added to the Figma `tab-item` component set) | Top tab bar | Medium — add as a new variant on the existing `tab-item` component set |
 
 ### Creating a new DS component
 
@@ -143,9 +171,9 @@ export interface MyComponentProps {
 
 // 2. Token maps — one object per visual attribute that changes by state
 const BG: Record<MyComponentState, string> = {
-  default:  "var(--surface/bg-secondary, #13131a)",
-  hover:    "var(--surface/bg-tertiary, #1e1e28)",
-  disabled: "var(--surface/bg-primary, #0e0e14)",
+  default:  "var(--surface/bg-secondary, #181818)",
+  hover:    "var(--surface/bg-tertiary, #212121)",
+  disabled: "var(--surface/bg-primary, #101010)",
 };
 
 // 3. Default export — inline styles only, no Tailwind, no CSS modules

@@ -59,15 +59,15 @@ interface StyleCfg {
 
 const STYLE_CFG: Record<ButtonStyle, StyleCfg> = {
   primary: {
-    bg:      "var(--component\\/btn-primary-bg, #e8a44a)",
-    bgHover: "#c4853a",
-    color:   "var(--component\\/btn-primary-text, #0f0f13)",
+    bg:      "var(--component\\/btn-primary-bg, #F06705)",
+    bgHover: "var(--component\\/btn-primary-bg-hover, #D65C04)",
+    color:   "var(--component\\/btn-primary-text, #121212)",
   },
   secondary: {
-    bg:      "var(--component\\/btn-secondary-bg, #1e1e28)",
-    bgHover: "#2e2e40",
+    bg:      "var(--component\\/btn-secondary-bg, #212121)",
+    bgHover: "#343434",
     color:   "var(--component\\/btn-secondary-text, #f0ede6)",
-    border:  "#3a3a52",
+    border:  "#424242",
   },
   positive: {
     bg:      "var(--semantic\\/success, #5bba6f)",
@@ -83,7 +83,7 @@ const STYLE_CFG: Record<ButtonStyle, StyleCfg> = {
     bg:      "transparent",
     bgHover: "transparent",
     color:   "var(--text\\/secondary, #9e9bb4)",
-    border:  "#3a3a52",
+    border:  "#424242",
   },
   info: {
     bg:      "var(--semantic\\/info, #5b9ee8)",
@@ -186,13 +186,15 @@ export default function Button({
   };
 
   const labelStyle: React.CSSProperties = {
-    fontFamily: "Inter, sans-serif",
-    fontSize:   `${sz.fontSize}px`,
-    fontWeight: 600,
-    lineHeight: `${sz.lineHeight}px`,
-    color:      sc.color,
-    whiteSpace: "nowrap",
-    flexShrink: 0,
+    fontFamily:    "'Space Grotesk', sans-serif",
+    fontSize:      `${sz.fontSize}px`,
+    fontWeight:    600,
+    lineHeight:    `${sz.lineHeight}px`,
+    color:         sc.color,
+    whiteSpace:    "nowrap",
+    flexShrink:    0,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em", // matches card-title uppercase treatment
   };
 
   const handleClick = async () => {

@@ -15,8 +15,10 @@ export interface GifTileProps {
   avatarUrl?: string;
   /** Number of hot dogs eaten */
   count?:     number;
-  /** Formatted date string, e.g. "Mar 28, 2026 · 2:14 PM" */
+  /** Formatted date string, e.g. "Mar 28, 2026" — overlaid top-left on the GIF */
   date?:      string;
+  /** Formatted time string, e.g. "2:14 PM" — overlaid top-right on the GIF */
+  time?:      string;
   /** Optional caption appended to the GIF */
   notes?:     string;
   /** Mood rating 1–5 */
@@ -69,7 +71,7 @@ function LoadingContent({ progress = 0, onRetry, onResubmit }: { progress?: numb
         width:        "128px",
         height:       "3px",
         borderRadius: "2px",
-        background:   "var(--surface\\/border-default, #2e2e40)",
+        background:   "var(--surface\\/border-default, #343434)",
         overflow:     "hidden",
         flexShrink:   0,
       }}>
@@ -95,7 +97,7 @@ function LoadingContent({ progress = 0, onRetry, onResubmit }: { progress?: numb
                 fontSize:    "12px",
                 fontWeight:  500,
                 lineHeight:  "16px",
-                color:       "var(--text\\/tertiary, #6b6882)",
+                color:       "var(--text\\/tertiary, #727272)",
                 cursor:      "pointer",
                 textDecoration: "underline",
                 textUnderlineOffset: "2px",
@@ -115,7 +117,7 @@ function LoadingContent({ progress = 0, onRetry, onResubmit }: { progress?: numb
                 fontSize:    "12px",
                 fontWeight:  500,
                 lineHeight:  "16px",
-                color:       "var(--text\\/tertiary, #6b6882)",
+                color:       "var(--text\\/tertiary, #727272)",
                 cursor:      "pointer",
                 textDecoration: "underline",
                 textUnderlineOffset: "2px",
@@ -139,6 +141,7 @@ export default function GifTile({
   avatarUrl,
   count     = 0,
   date,
+  time,
   notes,
   mood,
   progress = 0,
@@ -165,9 +168,8 @@ export default function GifTile({
         alignItems:    "flex-start",
         width:         "340px",
         overflow:      "hidden",
-        borderRadius:  "var(--radius\\/lg, 10px)",
-        border:        "1px solid var(--component\\/card-border, #2e2e40)",
-        background:    "var(--component\\/card-bg, #16161d)",
+        borderRadius:  "var(--component\\/card-radius, 24px)",
+        background:    "rgba(250, 249, 246, 0.95)", // raw — 95%-opacity cream fill, unlike the translucent card-bg/card-bg-elevated tokens shared cards use
         boxShadow:     "0px 4px 16px 0px rgba(0,0,0,0.20)",
         cursor:        onClick ? "pointer" : "default",
         boxSizing:     "border-box",
@@ -175,11 +177,17 @@ export default function GifTile({
         ...style,
       }}
     >
-      {/* GIF area — expands to fit the full GIF height; avatar pinned bottom-left */}
+      {/* GIF area — expands to fit the full GIF height; avatar pinned bottom-left.
+          Inset 12px on top/left/right so it sits within the tile rather than
+          flush against its edges, with its own rounded corners since it's no
+          longer sharing the outer card's radius. */}
       <div style={{
         position:       "relative",
         flexShrink:     0,
-        width:          "100%",
+        width:          "calc(100% - 24px)",
+        margin:         "12px 12px 0 12px",
+        overflow:       "hidden",
+        borderRadius:   "20px",
         // Reserve height whenever we know a GIF exists, even while off-screen
         // (activeSrc cleared). Without this the area collapses to 0, causing a
         // layout shift and scroll jank when the tile re-enters the viewport.
@@ -187,7 +195,7 @@ export default function GifTile({
         display:        "flex",
         alignItems:     "center",
         justifyContent: "center",
-        background:     "var(--surface\\/bg-tertiary, #1e1e28)",
+        background:     "var(--surface\\/bg-tertiary, #212121)",
       }}>
         {!isLoading && gifUrl && (
           <img
@@ -199,56 +207,167 @@ export default function GifTile({
         )}
         {isLoading && <LoadingContent progress={progress} onRetry={onRetry} onResubmit={onResubmit} />}
 
-        {/* July 4th 2025 double-count badge — absolute, top-right */}
-        {!isLoading && july4th && (
+        {/* Date + time — absolute, top-left, stacked, standalone strings (no badge chrome) */}
+        {!isLoading && (date || time) && (
           <div style={{
-            position:       "absolute",
-            right:          "10px",
-            top:            "10px",
-            background:     "rgba(0,0,0,0.60)",
-            backdropFilter: "blur(4px)",
-            borderRadius:   "8px",
-            padding:        "4px 8px",
-            fontFamily:     "Inter, sans-serif",
-            fontSize:       "13px",
-            fontWeight:     700,
-            lineHeight:     "1",
-            color:          "#fff",
-            userSelect:     "none",
-            display:        "flex",
-            alignItems:     "center",
-            gap:            "4px",
-            letterSpacing:  "0.02em",
+            position:      "absolute",
+            left:          "16px",
+            top:           "16px",
+            display:       "flex",
+            flexDirection: "column",
+            alignItems:    "flex-start",
+            gap:           "6px",
           }}>
-            🇺🇸 x2
+            {date && (
+              <span style={{
+                fontFamily:    "'Martian Mono', monospace",
+                fontSize:      "14px",
+                fontWeight:    500,
+                lineHeight:    "1",
+                color:         "#fff",
+                textShadow:    "0 1px 3px rgba(0,0,0,0.6)",
+                whiteSpace:    "nowrap",
+                userSelect:    "none",
+              }}>
+                {date}
+              </span>
+            )}
+            {time && (
+              <span style={{
+                fontFamily:    "'Martian Mono', monospace",
+                fontSize:      "14px",
+                fontWeight:    500,
+                lineHeight:    "1",
+                color:         "#fff",
+                textShadow:    "0 1px 3px rgba(0,0,0,0.6)",
+                whiteSpace:    "nowrap",
+                userSelect:    "none",
+              }}>
+                {time}
+              </span>
+            )}
           </div>
         )}
 
-        {/* Mood emoji — absolute, bottom-right */}
+        {/* Mood — absolute, top-right, standalone (label above emoji) */}
         {!isLoading && mood != null && MOOD_EMOJI[mood] && (
           <div style={{
-            position:     "absolute",
-            right:        "10px",
-            bottom:       "10px",
-            fontSize:     "28px",
-            lineHeight:   "1",
-            filter:       "drop-shadow(0 1px 3px rgba(0,0,0,0.6))",
-            userSelect:   "none",
+            position:      "absolute",
+            right:         "16px",
+            top:           "16px",
+            display:       "flex",
+            flexDirection: "column",
+            alignItems:    "center",
+            gap:           "4px",
           }}>
-            {MOOD_EMOJI[mood]}
+            <span style={{
+              fontFamily:    "'Martian Mono', monospace",
+              fontSize:      "14px",
+              fontWeight:    500,
+              lineHeight:    "1",
+              color:         "#fff",
+              textShadow:    "0 1px 3px rgba(0,0,0,0.6)",
+              whiteSpace:    "nowrap",
+              userSelect:    "none",
+            }}>
+              Mood
+            </span>
+            <span style={{
+              fontSize:   "22px",
+              lineHeight: "1",
+              userSelect: "none",
+              filter:     "drop-shadow(0 1px 3px rgba(0,0,0,0.6))",
+            }}>
+              {MOOD_EMOJI[mood]}
+            </span>
+          </div>
+        )}
+
+        {/* Avatar + name (left) and hot dog count (right) — absolute, bottom,
+            sharing one row so both sit on the same horizontal line regardless
+            of their individual content heights */}
+        {!isLoading && (
+          <div style={{
+            position:       "absolute",
+            left:           "16px",
+            right:          "16px",
+            bottom:         "16px",
+            display:        "flex",
+            alignItems:     "center",
+            justifyContent: "space-between",
+            gap:            "8px",
+          }}>
+            <div style={{
+              display:    "flex",
+              alignItems: "center",
+              gap:        "8px",
+              minWidth:   0,
+              flex:       "1 1 auto",
+            }}>
+              <Avatar name={name} src={avatarUrl} size="sm" style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.6)" }} />
+              <span style={{
+                fontFamily:   "'Martian Mono', monospace",
+                fontSize:     "18px",
+                fontWeight:   600,
+                lineHeight:   "1.2",
+                color:        "#fff",
+                textShadow:   "0 1px 3px rgba(0,0,0,0.6)",
+                overflow:     "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace:   "nowrap",
+              }}>
+                {name}
+              </span>
+            </div>
+
+            <div style={{
+              display:    "flex",
+              alignItems: "center",
+              gap:        "4px",
+              flexShrink: 0,
+            }}>
+              <span style={{
+                fontFamily: "'Martian Mono', monospace",
+                fontSize:   "14px",
+                fontWeight: 600,
+                lineHeight: "1",
+                color:      "#fff",
+                textShadow: "0 1px 3px rgba(0,0,0,0.6)",
+                whiteSpace: "nowrap",
+              }}>
+                +{count}
+              </span>
+              <span style={{ fontSize: "14px", lineHeight: "1", filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.6))" }}>🌭</span>
+              {july4th && (
+                <span style={{
+                  fontFamily: "'Martian Mono', monospace",
+                  fontSize:   "14px",
+                  fontWeight: 500,
+                  lineHeight: "1",
+                  color:      "#fff",
+                  textShadow: "0 1px 3px rgba(0,0,0,0.6)",
+                  whiteSpace: "nowrap",
+                }}>
+                  (x2 🇺🇸)
+                </span>
+              )}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Divider */}
+      {/* Divider + Metadata — in the default state, name/avatar, count, date/time,
+          and mood now all live as overlays on the GIF itself, so this footer
+          only exists when there's a note to show below it */}
+      {(isLoading || notes) && (
+      <>
       <div style={{
         flexShrink: 0,
         width:      "100%",
         height:     "1px",
-        background: "var(--component\\/card-border, #2e2e40)",
+        background: "var(--component\\/card-header-border, #EEE4DF)",
       }} />
 
-      {/* Metadata */}
       <div style={{
         display:       "flex",
         flexDirection: "column",
@@ -259,80 +378,17 @@ export default function GifTile({
         flexShrink:    0,
       }}>
 
-        {/* Default: name+notes grouped at gap:0, then date below at 8px */}
         {!isLoading ? (
           <>
-            {/* name + notes (left column) + count (right) */}
-            <div style={{
-              display:     "flex",
-              alignItems:  "flex-start",
-              width:       "100%",
-              gap:         "24px",
-            }}>
-              {/* Left column: avatar+name, then notes indented to username */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 0, flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", overflow: "hidden" }}>
-                  <Avatar name={name} src={avatarUrl} size="md" />
-                  <span style={{
-                    fontFamily:   "Inter, sans-serif",
-                    fontSize:     "18px",
-                    fontWeight:   600,
-                    lineHeight:   "26px",
-                    color:        "var(--text\\/primary, #f0ede6)",
-                    overflow:     "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace:   "nowrap",
-                    flex:         1,
-                    minWidth:     0,
-                  }}>
-                    {name}
-                  </span>
-                </div>
-                {notes && (
-                  <span style={{
-                    fontFamily:  "Inter, sans-serif",
-                    fontSize:    "16px",
-                    fontWeight:  400,
-                    lineHeight:  "22px",
-                    color:       "var(--text\\/primary, #f0ede6)",
-                    paddingLeft: "40px", // 32px avatar + 8px gap
-                  }}>
-                    "{notes}"
-                  </span>
-                )}
-              </div>
-
-              {/* Right: count */}
-              <div style={{ display: "flex", alignItems: "flex-start", gap: "4px", flexShrink: 0 }}>
-                <span style={{
-                  fontFamily: "Inter, sans-serif",
-                  fontSize:   "16px",
-                  fontWeight: 600,
-                  lineHeight: "26px",
-                  color:      "var(--brand\\/amber, #e8a44a)",
-                  whiteSpace: "nowrap",
-                }}>
-                  +{count}
-                </span>
-                <span style={{ fontSize: "16px", lineHeight: "26px" }}>🌭</span>
-              </div>
-            </div>
-
-            {/* date — 8px below the name/notes group, aligned to username */}
-            {date && (
+            {notes && (
               <span style={{
-                fontFamily:   "Inter, sans-serif",
-                fontSize:     "14px",
-                fontWeight:   400,
-                lineHeight:   "16px",
-                color:        "var(--text\\/tertiary, #6b6882)",
-                overflow:     "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace:   "nowrap",
-                width:        "100%",
-                paddingLeft:  "40px", // 32px avatar + 8px gap
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontSize:   "16px",
+                fontWeight: 500,
+                lineHeight: "22px",
+                color:      "#121212",
               }}>
-                {date}
+                "{notes}"
               </span>
             )}
           </>
@@ -353,7 +409,7 @@ export default function GifTile({
                   fontSize:     "18px",
                   fontWeight:   600,
                   lineHeight:   "26px",
-                  color:        "var(--text\\/primary, #f0ede6)",
+                  color:        "#121212",
                   overflow:     "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace:   "nowrap",
@@ -380,11 +436,11 @@ export default function GifTile({
 
             {notes && (
               <span style={{
-                fontFamily: "Inter, sans-serif",
+                fontFamily: "'Space Grotesk', sans-serif",
                 fontSize:   "16px",
-                fontWeight: 400,
+                fontWeight: 500,
                 lineHeight: "26px",
-                color:      "var(--text\\/primary, #f0ede6)",
+                color:      "#121212",
                 width:      "100%",
               }}>
                 {notes}
@@ -397,7 +453,7 @@ export default function GifTile({
                 fontSize:     "14px",
                 fontWeight:   400,
                 lineHeight:   "16px",
-                color:        "var(--text\\/tertiary, #6b6882)",
+                color:        "var(--text\\/tertiary, #727272)",
                 overflow:     "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace:   "nowrap",
@@ -409,6 +465,8 @@ export default function GifTile({
           </>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

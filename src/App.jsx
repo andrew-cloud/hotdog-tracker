@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 import "./App.css";
-import { Avatar, Button, Input, Stepper, Textarea, UploadField, GifTile, Toast, Divider, TabBar, Select, RadioGroup } from "./design-system";
+import { Avatar, Button, Card, Input, Stepper, Textarea, UploadField, GifTile, Toast, Divider, TabBar, Select, RadioGroup } from "./design-system";
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
 
@@ -349,11 +349,13 @@ function getCountdown(now) {
 function formatDate(timestamp) {
   if (!timestamp) return "";
   const d = new Date(typeof timestamp === "number" ? timestamp : Date.parse(timestamp));
-  return (
-    d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) +
-    " · " +
-    d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
-  );
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function formatTime(timestamp) {
+  if (!timestamp) return "";
+  const d = new Date(typeof timestamp === "number" ? timestamp : Date.parse(timestamp));
+  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 }
 
 const NEW_USER_SENTINEL = "__new__";
@@ -928,11 +930,13 @@ export default function HotdogTracker() {
       {/* ── Tab bar + content ── */}
       <div className="app-content">
         <TabBar
-          variant="pointing"
+          variant="chip"
+          className="ds-tabbar-chip"
           tabs={[
             { value: "log",       label: "Log a dog"  },
             { value: "standings", label: "Standings"  },
             { value: "gallery",   label: "Gallery"    },
+            { value: "profile",   label: "Profile (Coming Soon)", disabled: true },
           ]}
           value={tab}
           onChange={val => handleTabChange(val)}
@@ -947,11 +951,7 @@ export default function HotdogTracker() {
 
               {/* Auth — single card, PIN appears after name is selected */}
               {step === "auth" && (
-                <div className="ds-card ds-card-overflow">
-                  <div className="ds-card-header">
-                    <span className="ds-card-title">Who's chowin' down?</span>
-                  </div>
-                  <div className="ds-card-body">
+                <Card variant="default" size="md" title="Who's chowin' down?" subtitle={false}>
 
                     {/* Name select */}
                     <Select
@@ -1041,8 +1041,7 @@ export default function HotdogTracker() {
                       />
                     </div>
 
-                  </div>
-                </div>
+                </Card>
               )}
 
 
@@ -1053,108 +1052,97 @@ export default function HotdogTracker() {
                     Welcome{isNewUser === false ? " back" : " to the league"}, {authedName}!
                   </p>
 
-                  <div className="ds-card">
-                    <div className="ds-card-header">
-                      <span className="ds-card-title">Hot dogs consumed</span>
-                    </div>
-                    <div className="ds-card-body">
-                      <Stepper value={count} min={1} max={10} onChange={setCount} />
-                    </div>
-                  </div>
+                  <Card variant="default" size="md" title="Hot dogs consumed" subtitle={false}>
+                    <Stepper value={count} min={1} max={10} onChange={setCount} />
+                  </Card>
 
-                  <div className="ds-card">
-                    <div className="ds-card-header">
-                      <span className="ds-card-title">Video proof (required)</span>
-                      <span className="ds-card-subtitle">
-                        Your video will be converted to a gif and proudly displayed in the gallery.
-                      </span>
-                    </div>
-                    <div className="ds-card-body">
-                      <UploadField
-                        state={videoState}
-                        progress={uploadProgress}
-                        filename={videoFile?.name}
-                        filesize={videoFileSize}
-                        onFile={handleFileSelect}
-                        accept="video/*"
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                  </div>
+                  <Card
+                    variant="default"
+                    size="md"
+                    title="Video proof (required)"
+                    subtitle
+                    description="Your video will be converted to a gif and proudly displayed in the gallery."
+                  >
+                    <UploadField
+                      state={videoState}
+                      progress={uploadProgress}
+                      filename={videoFile?.name}
+                      filesize={videoFileSize}
+                      onFile={handleFileSelect}
+                      accept="video/*"
+                      style={{ width: "100%" }}
+                    />
+                  </Card>
 
-                  <div className="ds-card">
-                    <div className="ds-card-header">
-                      <span className="ds-card-title">When did you chow down?</span>
-                      {daysAgo > 0 && (() => {
-                        const then = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
-                        const now  = new Date();
-                        const crossesMonth = then.getMonth() !== now.getMonth() || then.getFullYear() !== now.getFullYear();
-                        return crossesMonth ? (
-                          <span className="ds-card-subtitle" style={{ color: "var(--semantic\\/warning, #e8a44a)" }}>
-                            This date is in a past month — it won't affect that month's champion.
-                          </span>
-                        ) : null;
-                      })()}
-                    </div>
-                    <div className="ds-card-body">
-                      <RadioGroup
-                        name="daysAgo"
-                        value={daysAgo}
-                        onChange={(v) => setDaysAgo(Number(v))}
-                        options={[
-                          { value: 0, label: "Today" },
-                          { value: 1, label: "1 day ago" },
-                          { value: 2, label: "2 days ago" },
-                          { value: 3, label: "3 days ago" },
-                        ]}
-                      />
-                    </div>
-                  </div>
+                  {(() => {
+                    let crossesMonth = false;
+                    if (daysAgo > 0) {
+                      const then = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
+                      const now  = new Date();
+                      crossesMonth = then.getMonth() !== now.getMonth() || then.getFullYear() !== now.getFullYear();
+                    }
+                    return (
+                      <Card
+                        variant="default"
+                        size="md"
+                        title="When did you chow down?"
+                        subtitle={crossesMonth}
+                        description="This date is in a past month — it won't affect that month's champion."
+                        descriptionColor="var(--semantic\\/warning, #e8a44a)"
+                      >
+                        <RadioGroup
+                          name="daysAgo"
+                          value={daysAgo}
+                          onChange={(v) => setDaysAgo(Number(v))}
+                          options={[
+                            { value: 0, label: "Today" },
+                            { value: 1, label: "1 day ago" },
+                            { value: 2, label: "2 days ago" },
+                            { value: 3, label: "3 days ago" },
+                          ]}
+                        />
+                      </Card>
+                    );
+                  })()}
 
-                  <div className="ds-card">
-                    <div className="ds-card-header">
-                      <span className="ds-card-title">How did it feel?</span>
+                  <Card variant="default" size="md" title="How did it feel?" subtitle={false}>
+                    <div className="ds-mood-picker">
+                      {[
+                        { value: 1, emoji: "🤢" },
+                        { value: 2, emoji: "😕" },
+                        { value: 3, emoji: "😐" },
+                        { value: 4, emoji: "🙂" },
+                        { value: 5, emoji: "🤩" },
+                      ].map(({ value, emoji }) => (
+                        <button
+                          key={value}
+                          className={`ds-mood-btn${mood === value ? " ds-mood-btn--selected" : ""}`}
+                          onClick={() => setMood(prev => prev === value ? null : value)}
+                          type="button"
+                          aria-label={`Mood ${value} of 5`}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
                     </div>
-                    <div className="ds-card-body">
-                      <div className="ds-mood-picker">
-                        {[
-                          { value: 1, emoji: "🤢" },
-                          { value: 2, emoji: "😕" },
-                          { value: 3, emoji: "😐" },
-                          { value: 4, emoji: "🙂" },
-                          { value: 5, emoji: "🤩" },
-                        ].map(({ value, emoji }) => (
-                          <button
-                            key={value}
-                            className={`ds-mood-btn${mood === value ? " ds-mood-btn--selected" : ""}`}
-                            onClick={() => setMood(prev => prev === value ? null : value)}
-                            type="button"
-                            aria-label={`Mood ${value} of 5`}
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  </Card>
 
-                  <div className="ds-card">
-                    <div className="ds-card-header">
-                      <span className="ds-card-title">Notes</span>
-                      <span className="ds-card-subtitle">
-                        Optional, but everyone loves a good story.
-                      </span>
-                    </div>
-                    <div className="ds-card-body">
-                      <Textarea
-                        value={notes}
-                        placeholder={`"So there I was, just me and the 7/11 employee..."`}
-                        onChange={e => setNotes(e.target.value)}
-                        maxLength={240}
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                  </div>
+                  <Card
+                    variant="default"
+                    size="md"
+                    title="Notes"
+                    subtitle
+                    description="Optional, but everyone loves a good story."
+                  >
+                    <Textarea
+                      value={notes}
+                      placeholder={`"So there I was, just me and the 7/11 employee..."`}
+                      onChange={e => setNotes(e.target.value)}
+                      maxLength={240}
+                      showLabel={false}
+                      style={{ width: "100%" }}
+                    />
+                  </Card>
 
                   <Button
                     buttonStyle="primary"
@@ -1175,10 +1163,7 @@ export default function HotdogTracker() {
           {tab === "standings" && (
             <>
               {/* ── Overall standings card ── */}
-              <div className="ds-card ds-card-shadow">
-                <div className="ds-card-header">
-                  <span className="ds-card-title">Standings</span>
-                </div>
+              <div className="ds-card ds-card-elevated">
                 <div className="ds-card-body" style={{ padding: "20px" }}>
                   {loadingData ? (
                     <p className="ds-empty">Loading…</p>
@@ -1191,7 +1176,7 @@ export default function HotdogTracker() {
                       const posChange = prevRank !== undefined ? prevRank - rank : 0;
                       return (
                         <div key={p.name}>
-                          {i > 0 && <Divider />}
+                          {i > 0 && <Divider color="var(--component\/card-divider, #EEE4DF)" />}
                           <div className="ds-standings-row">
                             <div className="ds-standings-rank-col">
                               {posChange > 0 && <span className="ds-rank-arrow up">▲</span>}
@@ -1213,7 +1198,7 @@ export default function HotdogTracker() {
 
               {/* ── Longest streak card ── */}
               {!loadingData && (
-                <div className="ds-card ds-streak-card">
+                <div className="ds-card ds-card-elevated ds-streak-card">
                   <div className="ds-streak-header">
                     <span className="ds-streak-icon">🔥</span>
                     <span className="ds-streak-title">Longest Streak</span>
@@ -1241,7 +1226,7 @@ export default function HotdogTracker() {
 
               {/* ── Battle card (current month) ── */}
               {!loadingData && showBattleCard && (
-                <div className="ds-card ds-battle-card">
+                <div className="ds-card ds-card-elevated ds-battle-card">
                   <div className="ds-battle-header">
                     <div className="ds-battle-title-row">
                       <span className="ds-battle-icon">⚔️</span>
@@ -1254,7 +1239,7 @@ export default function HotdogTracker() {
                       <p className="ds-empty" style={{ padding: "8px 0" }}>No one has logged a dog yet</p>
                     ) : battleStandings.map((p, i) => (
                       <div key={p.name}>
-                        {i > 0 && <Divider />}
+                        {i > 0 && <Divider color="var(--component\/card-divider, #EEE4DF)" />}
                         <div className="ds-standings-row">
                           <div className="ds-standings-left">
                             <Avatar name={p.name} src={avatarByName[p.name]} size="sm" />
@@ -1270,7 +1255,7 @@ export default function HotdogTracker() {
 
               {/* ── Champion cards (past months, newest first) ── */}
               {!loadingData && pastChampions.map(c => (
-                <div key={c.month} className="ds-card ds-champion-card">
+                <div key={c.month} className="ds-card ds-card-elevated ds-champion-card">
                   <div className="ds-champion-header">
                     <span className="ds-champion-icon">🏆</span>
                     <span className="ds-champion-title">{monthStrToName(c.month)}'s Champion</span>
@@ -1315,6 +1300,7 @@ export default function HotdogTracker() {
                         avatarUrl={avatarByName[e.name] ?? undefined}
                         count={e.count}
                         date={formatDate(e.timestamp)}
+                        time={formatTime(e.timestamp)}
                         notes={e.notes ?? undefined}
                         mood={e.mood ?? undefined}
                         july4th={isJuly4th2025PT(e.timestamp)}
