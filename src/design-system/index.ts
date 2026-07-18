@@ -5,7 +5,7 @@
 // Then import components from here:
 //   import { Button, GifTile, UploadField } from './design-system'
 
-export { default as Avatar }      from './components/Avatar';
+export { default as Avatar, getAvatarColor, darkenAvatarColor } from './components/Avatar';
 export type { AvatarProps, AvatarSize } from './components/Avatar';
 
 export { default as Button }      from './components/Button';
@@ -25,6 +25,9 @@ export type { GifTileProps, GifTileState } from './components/GifTile';
 
 export { default as Input }       from './components/Input';
 export type { InputProps }        from './components/Input';
+
+export { default as LineChart }   from './components/LineChart';
+export type { LineChartProps, LineChartPoint } from './components/LineChart';
 
 export { default as Radio }       from './components/Radio';
 export type { RadioProps }        from './components/Radio';

@@ -68,6 +68,24 @@ function hashName(name: string): number {
   return h % PALETTE.length;
 }
 
+/** The deterministic fallback background color Avatar would render for a given name — exported so other components (e.g. the profile LineChart) can match a user's avatar color. */
+export function getAvatarColor(name: string): string {
+  return PALETTE[hashName(name || "")];
+}
+
+/** A darker variant of a name's avatar color — each "shade" step is ~12% darker.
+ *  Used where the avatar hue itself needs to read clearly against the cream
+ *  card background (e.g. a thin chart line), rather than as a filled swatch. */
+export function darkenAvatarColor(name: string, steps: number = 2): string {
+  const hex = getAvatarColor(name);
+  const factor = Math.max(0, 1 - steps * 0.12);
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const toHex = (c: number) => Math.round(c * factor).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
 // ── Avatar ────────────────────────────────────────────
 
 export default function Avatar({

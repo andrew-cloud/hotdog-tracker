@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 import "./App.css";
-import { Avatar, Button, Card, Input, Stepper, Textarea, UploadField, GifTile, Toast, Divider, TabBar, Select, RadioGroup, StatTile } from "./design-system";
+import { Avatar, Button, Card, Input, Stepper, Textarea, UploadField, GifTile, Toast, Divider, TabBar, Select, RadioGroup, StatTile, LineChart, getAvatarColor, darkenAvatarColor } from "./design-system";
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
 
@@ -469,17 +469,71 @@ function computeUserStats(entries, name) {
     }
   }
 
-  // Average "consumption time" — proxied by uploaded video length. Older
-  // entries logged before duration capture was added won't have this field,
-  // so they're simply excluded from the average rather than treated as 0.
-  const durations = mine
-    .map(e => e.duration_seconds)
-    .filter(d => typeof d === "number" && Number.isFinite(d) && d > 0);
-  const avgConsumptionSeconds = durations.length
-    ? durations.reduce((s, d) => s + d, 0) / durations.length
+  // Average "consumption time" — proxied by uploaded video length, normalized
+  // per hot dog (a 5-minute video of 2 dogs is 2m30s/dog, not 5min/dog).
+  // Each entry's own per-dog rate is computed first, then averaged across
+  // entries. Older entries logged before duration capture was added (or any
+  // with count <= 0) don't have a usable rate, so they're excluded rather
+  // than treated as 0.
+  const perDogRates = mine
+    .filter(e => typeof e.duration_seconds === "number" && Number.isFinite(e.duration_seconds) && e.duration_seconds > 0 && e.count > 0)
+    .map(e => e.duration_seconds / e.count);
+  const avgConsumptionSeconds = perDogRates.length
+    ? perDogRates.reduce((s, r) => s + r, 0) / perDogRates.length
     : null;
 
   return { totalDogs, longestStreak, mostInADay, avgConsumptionSeconds };
+}
+
+// ── Cumulative consumption series (Profile line chart) ───────────────────────
+// Running total of dogs eaten for one contestant, day by day, from the season
+// start through today (Pacific Time) — a monotonically increasing line.
+const SEASON_START_PT = "2026-05-01";
+
+function computeDailySeries(entries, name) {
+  const mine = entries.filter(e => e.name.toLowerCase() === name.toLowerCase());
+
+  const byDate = {};
+  for (const e of mine) {
+    const d = toDateStr(new Date(e.timestamp));
+    const amt = e.count * (isJuly4th2025PT(e.timestamp) ? 2 : 1);
+    byDate[d] = (byDate[d] || 0) + amt;
+  }
+
+  const todayStr = toDateStr(new Date());
+  // Both bounds are plain "YYYY-MM-DD" calendar dates (already resolved to
+  // Pacific Time above) — enumerate the days between them with fixed UTC
+  // midnight steps, since no further timezone conversion is needed here.
+  const startMs = Date.parse(SEASON_START_PT + "T00:00:00Z");
+  const endMs   = Date.parse(todayStr + "T00:00:00Z");
+
+  const series = [];
+  let cumulative = 0;
+  for (let t = startMs; t <= endMs; t += 86400000) {
+    const d = new Date(t).toISOString().slice(0, 10);
+    cumulative += byDate[d] || 0;
+    series.push({ date: d, value: cumulative });
+  }
+  return series;
+}
+
+// Average cumulative series across every OTHER contestant, at each of the
+// same date points as computeDailySeries — used as a comparison line on the
+// profile chart ("how am I doing vs. the field").
+function computeAverageOthersSeries(entries, excludeName) {
+  const others = [...new Set(entries.map(e => e.name))]
+    .filter(n => n.toLowerCase() !== excludeName.toLowerCase());
+  if (!others.length) return null;
+
+  const seriesList = others.map(n => computeDailySeries(entries, n));
+  const len = seriesList[0].length;
+
+  const avg = [];
+  for (let i = 0; i < len; i++) {
+    const total = seriesList.reduce((s, series) => s + series[i].value, 0);
+    avg.push({ date: seriesList[0][i].date, value: total / seriesList.length });
+  }
+  return avg;
 }
 
 const EMOJI_POOL = [
@@ -1034,6 +1088,8 @@ export default function HotdogTracker() {
 
   const standings = computeStandings(contestEntries, contestUsers, userCreatedAt);
   const profileStats = authedName ? computeUserStats(contestEntries, authedName) : null;
+  const profileDailySeries = authedName ? computeDailySeries(contestEntries, authedName) : null;
+  const profileAvgOthersSeries = authedName ? computeAverageOthersSeries(contestEntries, authedName) : null;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -1458,6 +1514,15 @@ export default function HotdogTracker() {
                     <StatTile icon="🔥" value={profileStats.longestStreak} label="Longest streak" />
                     <StatTile icon="📈" value={profileStats.mostInADay} label="Most in a day" />
                     <StatTile icon="⏱️" value={formatDuration(profileStats.avgConsumptionSeconds)} label="Avg consumption time" />
+                    <LineChart
+                      data={profileDailySeries}
+                      compareData={profileAvgOthersSeries}
+                      label="Total dogs since May 1"
+                      seriesLabel={authedName}
+                      compareLabel="Everyone else (avg)"
+                      color={darkenAvatarColor(authedName)}
+                      style={{ gridColumn: "1 / -1" }}
+                    />
                   </div>
                 </>
               )}
