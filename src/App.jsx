@@ -358,6 +358,35 @@ function formatTime(timestamp) {
   return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 }
 
+// Reads a video File's duration client-side via a throwaway <video> element —
+// used as a proxy for "consumption time" (how long the eating video runs).
+// Best-effort: resolves null on any failure so a bad file never blocks upload.
+function readVideoDuration(file) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const videoEl = document.createElement("video");
+    videoEl.preload = "metadata";
+    videoEl.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      resolve(Number.isFinite(videoEl.duration) ? videoEl.duration : null);
+    };
+    videoEl.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(null);
+    };
+    videoEl.src = url;
+  });
+}
+
+// "137" -> "2:17"
+function formatDuration(seconds) {
+  if (seconds == null || !Number.isFinite(seconds)) return "—";
+  const total = Math.round(seconds);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 const NEW_USER_SENTINEL = "__new__";
 
 // Welcome message shown above "Hot dogs consumed" after login. New
@@ -414,7 +443,7 @@ function computeStandings(entries, users, userCreatedAt = {}) {
 // computeStandings/computeLongestStreak, just scoped to one person.
 function computeUserStats(entries, name) {
   const mine = entries.filter(e => e.name.toLowerCase() === name.toLowerCase());
-  if (!mine.length) return { totalDogs: 0, longestStreak: 0, mostInADay: 0 };
+  if (!mine.length) return { totalDogs: 0, longestStreak: 0, mostInADay: 0, avgConsumptionSeconds: null };
 
   const byDate = {};
   for (const e of mine) {
@@ -440,7 +469,17 @@ function computeUserStats(entries, name) {
     }
   }
 
-  return { totalDogs, longestStreak, mostInADay };
+  // Average "consumption time" — proxied by uploaded video length. Older
+  // entries logged before duration capture was added won't have this field,
+  // so they're simply excluded from the average rather than treated as 0.
+  const durations = mine
+    .map(e => e.duration_seconds)
+    .filter(d => typeof d === "number" && Number.isFinite(d) && d > 0);
+  const avgConsumptionSeconds = durations.length
+    ? durations.reduce((s, d) => s + d, 0) / durations.length
+    : null;
+
+  return { totalDogs, longestStreak, mostInADay, avgConsumptionSeconds };
 }
 
 const EMOJI_POOL = [
@@ -510,6 +549,7 @@ export default function HotdogTracker() {
   const [daysAgo, setDaysAgo] = useState(0); // 0 = today, 1–3 = backdated
   const [videoFile, setVideoFile] = useState(null);
   const [videoFileSize, setVideoFileSize] = useState("");
+  const [videoDuration, setVideoDuration] = useState(null); // seconds — read from video metadata client-side
   const [videoState, setVideoState] = useState("default");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -908,7 +948,7 @@ export default function HotdogTracker() {
   // ── Submit ────────────────────────────────────────────────────────────────
 
   // File selected by user — "selected" state, upload happens on submit
-  const handleFileSelect = (file) => {
+  const handleFileSelect = async (file) => {
     const MAX_SIZE = 1 * 1024 * 1024 * 1024; // 1 GB
     if (file.size > MAX_SIZE) {
       showToast("File is too large. Maximum size is 1 GB. 🚫", "error");
@@ -918,6 +958,7 @@ export default function HotdogTracker() {
     setVideoState("selected");
     const mb = (file.size / 1024 / 1024).toFixed(1);
     setVideoFileSize(`${mb} MB`);
+    setVideoDuration(await readVideoDuration(file));
   };
 
   const handleSubmit = async () => {
@@ -957,6 +998,7 @@ export default function HotdogTracker() {
         video_path: videoPath,
         notes: notes.trim() || null,
         mood: mood ?? null,
+        duration_seconds: videoDuration ?? null,
       };
       await sb.insertEntry(entry);
 
@@ -975,6 +1017,7 @@ export default function HotdogTracker() {
       setDaysAgo(0);
       setVideoFile(null);
       setVideoFileSize("");
+      setVideoDuration(null);
       setVideoState("default");
       setUploadProgress(0);
       handleTabChange("gallery");
@@ -1011,7 +1054,7 @@ export default function HotdogTracker() {
             { value: "log",       label: "Log a dog"  },
             { value: "standings", label: "Standings"  },
             { value: "gallery",   label: "Gallery"    },
-            { value: "profile",   label: "Profile" },
+            ...(authedName ? [{ value: "profile", label: "Profile" }] : []),
           ]}
           value={tab}
           onChange={val => handleTabChange(val)}
@@ -1414,6 +1457,7 @@ export default function HotdogTracker() {
                     <StatTile icon="🌭" value={profileStats.totalDogs} label="Total dogs eaten" />
                     <StatTile icon="🔥" value={profileStats.longestStreak} label="Longest streak" />
                     <StatTile icon="📈" value={profileStats.mostInADay} label="Most in a day" />
+                    <StatTile icon="⏱️" value={formatDuration(profileStats.avgConsumptionSeconds)} label="Avg consumption time" />
                   </div>
                 </>
               )}

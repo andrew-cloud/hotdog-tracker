@@ -225,6 +225,8 @@ Check that the `sb.insertEntry()` call in `App.jsx` includes the new field.
 
 ## Step 4 — Deploy
 
+**Never commit, push, or deploy without asking the user first — even if the change is verified and working.** Finish the work, confirm it builds/compiles, then stop and ask before touching git or running a deploy. Only proceed once the user explicitly says to commit/deploy.
+
 All deployments are manual, run from your local terminal:
 
 ```bash

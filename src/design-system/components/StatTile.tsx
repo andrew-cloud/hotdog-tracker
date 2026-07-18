@@ -3,7 +3,7 @@ import React from "react";
 // ── Types ─────────────────────────────────────────────
 
 export interface StatTileProps {
-  /** Emoji or short glyph shown above the value */
+  /** Emoji or short glyph shown next to the value */
   icon?:      string;
   /** Big headline number/string, e.g. "247" */
   value?:     string | number;
@@ -16,7 +16,8 @@ export interface StatTileProps {
 // ── StatTile ──────────────────────────────────────────
 // Non-interactive stat display, styled to match the Card/GifTile family
 // (95%-opacity cream fill, no border, same shadow + radius). Mirrors the
-// "stat-tile" component built in Figma: icon → big value → wrapped caption.
+// "stat-tile" component in Figma (node 613:13): value + icon share a row
+// on top, wrapped caption label below.
 
 export default function StatTile({
   icon,
@@ -43,23 +44,25 @@ export default function StatTile({
         ...style,
       }}
     >
-      {icon && (
-        <span style={{ fontSize: "18px", lineHeight: "1", userSelect: "none" }}>
-          {icon}
-        </span>
-      )}
+      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        {value !== undefined && (
+          <span style={{
+            fontFamily: "'Martian Mono', monospace",
+            fontWeight: 700,
+            fontSize:   "30px",
+            lineHeight: "1.1",
+            color:      "#121212",
+          }}>
+            {value}
+          </span>
+        )}
 
-      {value !== undefined && (
-        <span style={{
-          fontFamily: "'Martian Mono', monospace",
-          fontWeight: 700,
-          fontSize:   "30px",
-          lineHeight: "1.1",
-          color:      "#121212",
-        }}>
-          {value}
-        </span>
-      )}
+        {icon && (
+          <span style={{ fontSize: "26px", lineHeight: "1", userSelect: "none" }}>
+            {icon}
+          </span>
+        )}
+      </div>
 
       {label && (
         <span style={{
