@@ -180,12 +180,16 @@ export default function GifTile({
       {/* GIF area — expands to fit the full GIF height; avatar pinned bottom-left.
           Inset 12px on top/left/right so it sits within the tile rather than
           flush against its edges, with its own rounded corners since it's no
-          longer sharing the outer card's radius. */}
+          longer sharing the outer card's radius. Bottom inset is conditional:
+          when the notes footer renders, its own padding already provides
+          breathing room below the image, so the gap would double up; when
+          there's no footer, the image needs its own 12px bottom margin so it
+          doesn't run flush against the card's bottom edge. */}
       <div style={{
         position:       "relative",
         flexShrink:     0,
         width:          "calc(100% - 24px)",
-        margin:         "12px 12px 0 12px",
+        margin:         (isLoading || notes) ? "12px 12px 0 12px" : "12px",
         overflow:       "hidden",
         borderRadius:   "20px",
         // Reserve height whenever we know a GIF exists, even while off-screen
