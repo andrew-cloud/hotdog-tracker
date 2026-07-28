@@ -88,27 +88,6 @@ const sb = {
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
-  // Returns { [display_name_lowercase]: rank } for all contestants
-  async getRankSnapshot() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rank_snapshots?select=display_name,rank`, { headers: this.headers });
-    if (!res.ok) throw new Error(await res.text());
-    const rows = await res.json();
-    return Object.fromEntries(rows.map(r => [r.display_name.toLowerCase(), r.rank]));
-  },
-  // Upserts current standings — called once after data loads
-  async saveRankSnapshot(standings) {
-    const rows = standings.map((p, i) => ({
-      display_name: p.name,
-      rank: i + 1,
-      updated_at: new Date().toISOString(),
-    }));
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rank_snapshots`, {
-      method: "POST",
-      headers: { ...this.headers, "Prefer": "resolution=merge-duplicates" },
-      body: JSON.stringify(rows),
-    });
-    if (!res.ok) throw new Error(await res.text());
-  },
   // Returns all past monthly champions sorted newest-first
   async getMonthlyChampions() {
     const res = await fetch(
@@ -662,17 +641,12 @@ export default function HotdogTracker() {
   const resubmitEntryRef  = useRef(null); // entry being resubmitted
   const [windowStart, setWindowStart] = useState(0);
 
-  // Previous-session rank snapshot for position-change arrows (▲/▼).
-  // Fetched from Supabase on load — survives cache clears and works across devices.
-  const [prevRankByName, setPrevRankByName] = useState({});
-
   useEffect(() => {
     (async () => {
       try {
-        const [entryData, userData, rankSnapshot, champions] = await Promise.all([
+        const [entryData, userData, champions] = await Promise.all([
           sb.getEntries(),
           sb.getUsers(),
-          sb.getRankSnapshot(),
           sb.getMonthlyChampions(),
         ]);
         setEntries(entryData);
@@ -681,7 +655,6 @@ export default function HotdogTracker() {
         setUserCreatedAt(Object.fromEntries(userData.map(u => [u.display_name.toLowerCase(), u.created_at])));
         const pending = new Set(entryData.filter(e => e.video_path && !e.gif_url).map(e => e.id));
         setProcessingIds(pending);
-        setPrevRankByName(rankSnapshot);
         setMonthlyChampions(champions);
       } catch {
         showToast("Could not load data", "error");
@@ -1072,13 +1045,6 @@ export default function HotdogTracker() {
       setUploadProgress(100);
       setVideoState("filled");
 
-      // ── Snapshot current standings before inserting the new entry ────────
-      // This freezes the "before" state so arrows persist until the next log.
-      const currentStandings = computeStandings(contestEntries, contestUsers, userCreatedAt);
-      sb.saveRankSnapshot(currentStandings).catch(err =>
-        console.warn("Rank snapshot save failed (non-fatal):", err)
-      );
-
       // ── Save entry ───────────────────────────────────────────────────────
       const entry = {
         id,
@@ -1124,6 +1090,16 @@ export default function HotdogTracker() {
   // ── Derived ───────────────────────────────────────────────────────────────
 
   const standings = computeStandings(contestEntries, contestUsers, userCreatedAt);
+
+  // Rank-change highlight (▲/▼) — computed live, not stored, so it "clears"
+  // automatically at midnight PT and always reflects the net change across
+  // however many entries were logged today, not just the last one. Compares
+  // current standings against standings computed with today's entries
+  // excluded (i.e. where things stood at the start of today).
+  const entriesBeforeToday = contestEntries.filter(e => toDateStr(new Date(e.timestamp)) !== toDateStr(new Date()));
+  const standingsStartOfDay = computeStandings(entriesBeforeToday, contestUsers, userCreatedAt);
+  const rankStartOfDayByName = Object.fromEntries(standingsStartOfDay.map((p, i) => [p.name.toLowerCase(), i + 1]));
+
   const profileStats = authedName ? computeUserStats(contestEntries, authedName) : null;
   const profileDailySeries = authedName ? computeDailySeries(contestEntries, authedName) : null;
   const profileAvgOthersSeries = authedName ? computeAverageOthersSeries(contestEntries, authedName) : null;
@@ -1386,7 +1362,7 @@ export default function HotdogTracker() {
                   ) : (() => {
                     return standings.map((p, i) => {
                       const rank = i + 1;
-                      const prevRank = prevRankByName[p.name.toLowerCase()];
+                      const prevRank = rankStartOfDayByName[p.name.toLowerCase()];
                       const posChange = prevRank !== undefined ? prevRank - rank : 0;
                       return (
                         <div key={p.name}>
