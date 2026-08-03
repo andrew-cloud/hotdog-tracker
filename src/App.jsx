@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
 import "./App.css";
 import { Avatar, Button, Card, Input, Stepper, Textarea, UploadField, GifTile, Toast, Divider, TabBar, Select, RadioGroup, StatTile, LineChart, getAvatarColor, darkenAvatarColor } from "./design-system";
@@ -1088,21 +1088,41 @@ export default function HotdogTracker() {
   };
 
   // ── Derived ───────────────────────────────────────────────────────────────
+  // These recompute standings/streaks/series across every entry and every
+  // contestant, so they're memoized on the underlying data (entries/users/
+  // authedName) rather than recalculated on every render — otherwise typing
+  // in an unrelated field (e.g. the Notes textarea, which re-renders this
+  // whole component on each keystroke) would re-run all of this for no
+  // reason, since none of it changes while you're just typing.
 
-  const standings = computeStandings(contestEntries, contestUsers, userCreatedAt);
+  const standings = useMemo(
+    () => computeStandings(contestEntries, contestUsers, userCreatedAt),
+    [contestEntries, contestUsers, userCreatedAt]
+  );
 
   // Rank-change highlight (▲/▼) — computed live, not stored, so it "clears"
   // automatically at midnight PT and always reflects the net change across
   // however many entries were logged today, not just the last one. Compares
   // current standings against standings computed with today's entries
   // excluded (i.e. where things stood at the start of today).
-  const entriesBeforeToday = contestEntries.filter(e => toDateStr(new Date(e.timestamp)) !== toDateStr(new Date()));
-  const standingsStartOfDay = computeStandings(entriesBeforeToday, contestUsers, userCreatedAt);
-  const rankStartOfDayByName = Object.fromEntries(standingsStartOfDay.map((p, i) => [p.name.toLowerCase(), i + 1]));
+  const rankStartOfDayByName = useMemo(() => {
+    const entriesBeforeToday = contestEntries.filter(e => toDateStr(new Date(e.timestamp)) !== toDateStr(new Date()));
+    const standingsStartOfDay = computeStandings(entriesBeforeToday, contestUsers, userCreatedAt);
+    return Object.fromEntries(standingsStartOfDay.map((p, i) => [p.name.toLowerCase(), i + 1]));
+  }, [contestEntries, contestUsers, userCreatedAt]);
 
-  const profileStats = authedName ? computeUserStats(contestEntries, authedName) : null;
-  const profileDailySeries = authedName ? computeDailySeries(contestEntries, authedName) : null;
-  const profileAvgOthersSeries = authedName ? computeAverageOthersSeries(contestEntries, authedName) : null;
+  const profileStats = useMemo(
+    () => authedName ? computeUserStats(contestEntries, authedName) : null,
+    [contestEntries, authedName]
+  );
+  const profileDailySeries = useMemo(
+    () => authedName ? computeDailySeries(contestEntries, authedName) : null,
+    [contestEntries, authedName]
+  );
+  const profileAvgOthersSeries = useMemo(
+    () => authedName ? computeAverageOthersSeries(contestEntries, authedName) : null,
+    [contestEntries, authedName]
+  );
   const myRank = authedName
     ? standings.findIndex(s => s.name.toLowerCase() === authedName.toLowerCase()) + 1
     : 0;
