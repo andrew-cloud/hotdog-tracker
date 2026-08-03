@@ -15,26 +15,32 @@ export interface ToastProps {
 }
 
 // ── Token maps ────────────────────────────────────────
+// Toast now sits on the same light-card system as Card/GifTile/StatTile
+// (cream/tinted fill, no border, card shadow, 24px radius) instead of the
+// old dark navy/green/amber/red panels left over from the dark-mode-only
+// era. Per-type tinting uses the same light tints already established by
+// Input's success/error fields, plus matching blue/crimson tints for
+// info/warning so all four types stay visually distinct on the light fill.
 
 const BG: Record<ToastType, string> = {
-  info:    "var(--component\\/toast-bg-info, #0a1828)",
-  success: "var(--component\\/toast-bg-success, #0a1f0d)",
-  warning: "var(--component\\/toast-bg-warning, #2a1e08)",
-  error:   "var(--component\\/toast-bg-error, #2a0808)",
+  info:    "#EAF2FD", // raw — light blue tint, mirrors input-bg-success/error pattern
+  success: "#EAF6EC", // raw — matches --component/input-bg-success
+  warning: "#FBE9EA", // raw — light warm-red tint (warning now shares the crimson ramp)
+  error:   "#FDEAEA", // raw — matches --component/input-bg-error
 };
 
 const BAR: Record<ToastType, string> = {
-  info:    "var(--component\\/toast-bar-info, #5b9ee8)",
-  success: "var(--component\\/toast-bar-success, #5bba6f)",
-  warning: "var(--component\\/toast-bar-warning, #A30003)",
-  error:   "var(--component\\/toast-bar-error, #e85c5c)",
+  info:    "#2266C4", // raw — prim-blue-500, darker/more saturated for contrast on light fill
+  success: "#2E8B3F", // raw — prim-green-500
+  warning: "#770305", // raw — prim-amber-500 (crimson ramp)
+  error:   "#C43030", // raw — prim-red-500
 };
 
 const ICON_COLOR: Record<ToastType, string> = {
-  info:    "var(--semantic\\/info, #5b9ee8)",
-  success: "var(--semantic\\/success, #5bba6f)",
-  warning: "var(--semantic\\/warning, #A30003)",
-  error:   "var(--semantic\\/danger, #e85c5c)",
+  info:    BAR.info,
+  success: BAR.success,
+  warning: BAR.warning,
+  error:   BAR.error,
 };
 
 const ICON: Record<ToastType, string> = {
@@ -70,10 +76,11 @@ export default function Toast({
         flexDirection:"column",
         alignItems:   "flex-start",
         overflow:     "hidden",
-        borderRadius: "var(--radius\\/md, 6px)",
-        border:       "1px solid var(--component\\/toast-border, #343434)",
+        borderRadius: "var(--component\\/card-radius, 24px)", // matches Card/GifTile/StatTile radius
+        border:       "none", // light-card family uses shadow, not a border, to separate from the page
         width:        "360px",
         background:   BG[type],
+        boxShadow:    "0px 4px 16px 0px rgba(0,0,0,0.20)", // same elevation as Card/GifTile/StatTile
         boxSizing:    "border-box",
         ...style,
       }}
@@ -115,7 +122,7 @@ export default function Toast({
             paddingTop: "2px",
           }}>
             <span style={{
-              fontFamily: "Inter, sans-serif",
+              fontFamily: "'Space Grotesk', sans-serif",
               fontSize:   "14px",
               fontWeight: 700,
               lineHeight: "20px",
@@ -139,11 +146,11 @@ export default function Toast({
           }}>
             {title && (
               <p style={{
-                fontFamily: "Inter, sans-serif",
+                fontFamily: "'Space Grotesk', sans-serif",
                 fontSize:   "14px",
-                fontWeight: 400,
+                fontWeight: 600,
                 lineHeight: "20px",
-                color:      "var(--text\\/primary, #f0ede6)",
+                color:      "#121212", // dark ink — matches Card title / StatTile value / input-text on the light fill
                 width:      "100%",
                 margin:     0,
                 flexShrink: 0,
@@ -152,11 +159,11 @@ export default function Toast({
               </p>
             )}
             <p style={{
-              fontFamily: "Inter, sans-serif",
+              fontFamily: "'Space Grotesk', sans-serif",
               fontSize:   "13px",
-              fontWeight: 400,
+              fontWeight: 500,
               lineHeight: "19px",
-              color:      "var(--text\\/secondary, #9e9bb4)",
+              color:      "var(--text\\/secondary, #727272)",
               width:      "100%",
               margin:     0,
               flexShrink: 0,
@@ -181,11 +188,11 @@ export default function Toast({
               aria-label="Dismiss notification"
             >
               <span style={{
-                fontFamily: "Inter, sans-serif",
+                fontFamily: "'Space Grotesk', sans-serif",
                 fontSize:   "18px",
-                fontWeight: 400,
+                fontWeight: 500,
                 lineHeight: "20px",
-                color:      "var(--component\\/toast-close, #727272)",
+                color:      "var(--text\\/tertiary, #727272)",
                 whiteSpace: "nowrap",
               }}>
                 ×
