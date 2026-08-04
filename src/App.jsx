@@ -760,26 +760,42 @@ export default function HotdogTracker() {
   // These users are permanently excluded from standings, streak, and battle.
   // Their entries stay in the database and still appear under past champion cards.
   const DROPPED = ["tanto"];
-  const contestEntries = entries.filter(e => !DROPPED.includes(e.name.toLowerCase()));
-  const contestUsers   = users.filter(u => !DROPPED.includes(u.toLowerCase()));
+  // entries.filter()/users.filter() build brand-new arrays on every render.
+  // Downstream useMemo hooks key off contestEntries/contestUsers, but a new
+  // array reference fails the useMemo dependency check even when the actual
+  // contents haven't changed — so without memoizing these too, every other
+  // memoization below was silently recomputing on every render anyway
+  // (e.g. every keystroke in an unrelated field). Memoizing on the raw
+  // entries/users arrays (which DO stay referentially stable between
+  // unrelated re-renders) fixes that.
+  const contestEntries = useMemo(
+    () => entries.filter(e => !DROPPED.includes(e.name.toLowerCase())),
+    [entries]
+  );
+  const contestUsers = useMemo(
+    () => users.filter(u => !DROPPED.includes(u.toLowerCase())),
+    [users]
+  );
 
   // Pacific month boundaries as UTC timestamps
   const lastDayOfMonth = new Date(pacificYear, pacificMonth, 0).getDate();
   const monthStart = ptToUTC(pacificYear, pacificMonth, 1, 0, 0, 0);
   const monthEnd   = ptToUTC(pacificYear, pacificMonth, lastDayOfMonth, 23, 59, 59);
-  const battleEntries = contestEntries.filter(e => e.timestamp >= monthStart && e.timestamp <= monthEnd);
+  const battleStandings = useMemo(() => {
+    const battleEntries = contestEntries.filter(e => e.timestamp >= monthStart && e.timestamp <= monthEnd);
 
-  // Aggregate into battle standings — top 3, tie-break: most dogs, then earliest last entry
-  const battleTotals = {};
-  for (const e of battleEntries) {
-    const k = e.name.toLowerCase();
-    if (!battleTotals[k]) battleTotals[k] = { name: e.name, count: 0, lastTs: 0 };
-    battleTotals[k].count += e.count * (isJuly4th2025PT(e.timestamp) ? 2 : 1);
-    battleTotals[k].lastTs = Math.max(battleTotals[k].lastTs, e.timestamp);
-  }
-  const battleStandings = Object.values(battleTotals)
-    .sort((a, b) => b.count - a.count || a.lastTs - b.lastTs)
-    .slice(0, 3);
+    // Aggregate into battle standings — top 3, tie-break: most dogs, then earliest last entry
+    const battleTotals = {};
+    for (const e of battleEntries) {
+      const k = e.name.toLowerCase();
+      if (!battleTotals[k]) battleTotals[k] = { name: e.name, count: 0, lastTs: 0 };
+      battleTotals[k].count += e.count * (isJuly4th2025PT(e.timestamp) ? 2 : 1);
+      battleTotals[k].lastTs = Math.max(battleTotals[k].lastTs, e.timestamp);
+    }
+    return Object.values(battleTotals)
+      .sort((a, b) => b.count - a.count || a.lastTs - b.lastTs)
+      .slice(0, 3);
+  }, [contestEntries, monthStart, monthEnd]);
 
   // Live countdown to end of month
   const [countdown, setCountdown] = useState(() => getCountdown(new Date()));
@@ -792,7 +808,7 @@ export default function HotdogTracker() {
   const pastChampions = monthlyChampions.filter(c => c.month < currentMonthStr);
 
   // Longest streak across all contestants
-  const longestStreak = computeLongestStreak(contestEntries);
+  const longestStreak = useMemo(() => computeLongestStreak(contestEntries), [contestEntries]);
 
   // Sliding window constants
   const WINDOW_SIZE      = 24;  // max tiles in the DOM at once
