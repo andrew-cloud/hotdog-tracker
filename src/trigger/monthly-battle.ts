@@ -10,6 +10,14 @@ const sbHeaders = {
   Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
 };
 
+// ── Dropped competitors ─────────────────────────────────────────────
+// Mirrors DROPPED in src/App.jsx: permanently excluded from standings,
+// streak, and battle as of July 2026 onward. Their entries stay in the
+// database and still appear under past champion cards for months before
+// they were dropped (they can still be May/June champion, just not
+// July+).
+const DROPPED = ["tanto"];
+
 // ── Pacific Time helpers ──────────────────────────────────────────────────────
 // All month boundaries match the frontend: Pacific Time, not UTC.
 
@@ -43,6 +51,14 @@ function getPacificOffsetMs(date: Date): number {
 function ptToUTC(y: number, m: number, d: number, h: number, min: number, s: number): number {
   const candidate = new Date(Date.UTC(y, m - 1, d, h, min, s));
   return candidate.getTime() + getPacificOffsetMs(candidate);
+}
+
+// ── July 4th 2026 double-count ──────────────────────────────────────
+// Mirrors isJuly4th2025PT in src/App.jsx: entries logged on July 4, 2026
+// (Pacific Time) count as ×2 toward the monthly champion total, same as
+// they do on the live leaderboards.
+function isJuly4thPT(timestamp: number): boolean {
+  return toDateStrPT(new Date(timestamp)) === "2026-07-04";
 }
 
 // ── Task ──────────────────────────────────────────────────────────────────────
@@ -116,9 +132,10 @@ export const monthlyBattleClose = schedules.task({
     > = {};
 
     for (const e of entries) {
+      if (DROPPED.includes(e.name.toLowerCase())) continue;
       const k = e.name.toLowerCase();
       if (!totals[k]) totals[k] = { name: e.name, count: 0, lastTs: 0 };
-      totals[k].count += e.count;
+      totals[k].count += e.count * (isJuly4thPT(e.timestamp) ? 2 : 1);
       // We want the timestamp when their running total last increased —
       // since entries arrive chronologically (ordered asc), MAX(timestamp)
       // among the entries that brought them to their final total.
